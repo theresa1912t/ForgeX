@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+
+@layer base {
+  * {
+    border-color: #E4E7EB;
+  }
+  
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #F7F8FA;
+    color: #18202A;
+    font-size: 15px;
+    line-height: 24px;
+    font-weight: 400;
+  }
+  
+  /* Smooth scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #E4E7EB;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #8A93A0;
+  }
+}
+
+/* Custom Design System Utility Classes */
+.card-base {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
+  padding: 24px;
+}
+
+.card-ai {
+  background-color: #F8FAFF;
+  border: 1px solid #D9E4FF;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.03);
+  padding: 24px;
+}

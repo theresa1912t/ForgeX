@@ -1,0 +1,6 @@
+{
+  "name": "FactoryLens - AI Production Loss & Operations Copilot",
+  "description": "AI-powered production loss intelligence and operations copilot for food & beverage manufacturers. Turn factory data into the next best action.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
