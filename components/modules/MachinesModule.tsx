@@ -20,9 +20,13 @@ import {
   Wifi,
   Sparkles,
   Layers,
+  Flame,
+  Boxes,
+  TrendingDown,
 } from 'lucide-react';
 import { DataSourcesModal } from '@/components/DataSourcesModal';
 import { HealthFormulaModal } from '@/components/HealthFormulaModal';
+import { formatCurrency } from '@/lib/calculations';
 
 export function MachinesModule() {
   const {
@@ -31,8 +35,11 @@ export function MachinesModule() {
     setSelectedMachineId,
     maintenanceRecords,
     downtimeRecords,
+    wasteRecords,
+    ingredientUsageRecords,
     setActiveTab,
     setSelectedInvestigationId,
+    openInvestigation,
     machineProfiles,
     deviceConnections,
   } = useFactory();
@@ -50,6 +57,10 @@ export function MachinesModule() {
 
   const machineMaint = maintenanceRecords.filter((r) => r.machineId === currentMachine.id);
   const machineDown = downtimeRecords.filter((r) => r.machineId === currentMachine.id);
+  const machineWaste = wasteRecords.filter((w) => w.machineId === currentMachine.id);
+  const machineIngredients = ingredientUsageRecords.filter((ing) => ing.machineId === currentMachine.id);
+  const machineWasteKg = machineWaste.reduce((acc, w) => acc + w.wasteQuantityKg, 0);
+  const machineWasteCost = machineWaste.reduce((acc, w) => acc + w.wasteCost, 0);
 
   return (
     <div className="space-y-8">
@@ -377,6 +388,112 @@ export function MachinesModule() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* 5. Material & Waste Telemetry Impact Section */}
+        <div className="p-5 rounded-xl border border-[#FEDF89] bg-[#FFFCF5] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#FEDF89]/60">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[#E56B00] text-white flex items-center justify-center shrink-0">
+                <Flame className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-[16px] font-semibold text-[#18202A] flex items-center gap-2">
+                  <span>Material Consumption & Scrap Impact</span>
+                  {machineWasteKg > 0 && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold tracking-wider uppercase bg-[#FEF3F2] text-[#D92D20]">
+                      {machineWasteKg} kg Scrap Generated
+                    </span>
+                  )}
+                </h3>
+                <p className="text-[13px] text-[#5F6875]">
+                  Automated correlation between mechanical sensor telemetry and checkweigher / reject bin loss
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab('waste-energy')}
+                className="h-8 px-3 text-[13px] font-medium text-[#18202A] bg-white border border-[#E4E7EB] hover:bg-[#F7F8FA] rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Boxes className="w-3.5 h-3.5 text-[#5F6875]" />
+                <span>View Full Waste Log</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-3.5 bg-white rounded-lg border border-[#E4E7EB]">
+              <span className="text-[12px] text-[#5F6875]">Cumulative Shift Scrap</span>
+              <div className="text-[20px] font-semibold font-mono text-[#18202A] mt-1 tabular-nums">
+                {machineWasteKg} <span className="text-[13px] font-normal text-[#5F6875]">kg</span>
+              </div>
+              <div className="text-[12px] font-mono text-[#D92D20] mt-0.5">
+                {formatCurrency(machineWasteCost)} direct loss
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-lg border border-[#E4E7EB]">
+              <span className="text-[12px] text-[#5F6875]">Active Batch In-Process</span>
+              <div className="text-[14px] font-semibold text-[#18202A] mt-1 truncate">
+                {machineIngredients[0]?.materialName || 'Standard Production Batch'}
+              </div>
+              <div className="text-[12px] font-mono text-[#5F6875] mt-0.5">
+                {machineIngredients[0] ? `Lot #${machineIngredients[0].batchCode}` : 'Recipe Nominal'}
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-lg border border-[#E4E7EB]">
+              <span className="text-[12px] text-[#5F6875]">Telemetry-Waste Rate</span>
+              <div className="text-[20px] font-semibold font-mono text-[#18202A] mt-1 tabular-nums">
+                {currentMachine.id === 'mach-m03' ? '27.2 kg/hr' : currentMachine.status === 'Normal' ? '0.0 kg/hr' : '8.5 kg/hr'}
+              </div>
+              <div className="text-[12px] text-[#8A93A0] mt-0.5">
+                {currentMachine.id === 'mach-m03' ? 'Elevated during valve flutter' : 'Normal operating limits'}
+              </div>
+            </div>
+          </div>
+
+          {machineWaste.length > 0 && (
+            <div className="pt-2">
+              <div className="text-[13px] font-medium text-[#18202A] mb-2">
+                Recorded Scrap Incidents for {currentMachine.name}:
+              </div>
+              <div className="space-y-2">
+                {machineWaste.map((w) => (
+                  <div
+                    key={w.id}
+                    className="p-3 bg-white rounded-lg border border-[#E4E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[13px]"
+                  >
+                    <div>
+                      <div className="font-semibold text-[#18202A]">
+                        {w.wasteQuantityKg} kg — {w.wasteType}
+                      </div>
+                      <div className="text-[#5F6875] text-[12px] mt-0.5">
+                        Batch: {w.productionBatchCode} · {w.timestamp} {w.defectCategory ? `· [${w.defectCategory}]` : ''}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono font-semibold text-[#D92D20]">
+                        ${w.wasteCost}
+                      </span>
+                      {w.relatedInvestigationId && (
+                        <button
+                          onClick={() => openInvestigation(w.relatedInvestigationId!, 'machines')}
+                          className="h-7 px-2.5 rounded text-[12px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] transition-colors inline-flex items-center gap-1 shrink-0"
+                        >
+                          <SearchCode className="w-3 h-3" />
+                          <span>Investigate Anomaly</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Maintenance Logs and Downtime Logs */}

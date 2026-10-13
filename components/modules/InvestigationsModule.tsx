@@ -22,6 +22,9 @@ import {
   Check,
   X,
   RotateCcw,
+  Flame,
+  Boxes,
+  Cpu,
 } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/calculations';
 
@@ -400,6 +403,111 @@ export function InvestigationsModule() {
         </div>
       </div>
 
+      {/* Section C.2: Multi-Signal Cross-Correlation Triangulation */}
+      <div className="card-base space-y-4 border-2 border-[#2F5BFF]/20 bg-[#FBFDFF]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EB]">
+          <div>
+            <div className="flex items-center gap-2 text-[#2F5BFF] font-semibold text-[15px]">
+              <Sparkles className="w-4 h-4" />
+              <span>Multi-Signal Triangulation: Machine × Ingredient × Waste Synthesis</span>
+            </div>
+            <p className="text-[13px] text-[#5F6875] mt-0.5">
+              How mechanical condition, raw material batch physics, and scrap measurements converge into one root cause
+            </p>
+          </div>
+          <span className="text-[12px] font-mono text-[#5F6875] bg-white px-2.5 py-1 rounded border border-[#E4E7EB]">
+            Correlation Confidence: 87%
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Signal 1: Machine Telemetry */}
+          <div className="p-4 bg-white rounded-xl border border-[#E4E7EB] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-bold uppercase tracking-wider text-[#2F5BFF] flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5" />
+                <span>Signal 1: Machine OT</span>
+              </span>
+              <span className="text-[11px] font-mono text-[#D92D20] bg-[#FEF3F2] px-2 py-0.5 rounded font-semibold">
+                Anomalous (68% Health)
+              </span>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-[15px] text-[#18202A]">Filling Machine M-03</h4>
+              <p className="text-[13px] text-[#5F6875] mt-1 leading-[20px]">
+                Manifold vibration spiked <strong>+38% (3.31 mm/s)</strong> and stroke cycle time stretched <strong>+17% (2.11s)</strong> on Siemens PLC register R:102.
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-[#E4E7EB] text-[12px] text-[#18202A]">
+              <strong>Physical effect:</strong> Flutter on diaphragm heads #4 & #8 producing internal fluid cavitation.
+            </div>
+          </div>
+
+          {/* Signal 2: Raw Material Batch */}
+          <div className="p-4 bg-white rounded-xl border border-[#E4E7EB] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-bold uppercase tracking-wider text-[#E56B00] flex items-center gap-1.5">
+                <Boxes className="w-3.5 h-3.5" />
+                <span>Signal 2: Ingredient Batch</span>
+              </span>
+              <span className="text-[11px] font-mono text-[#E56B00] bg-[#FFF6ED] px-2 py-0.5 rounded font-semibold">
+                Viscosity +8.4%
+              </span>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-[15px] text-[#18202A]">Valencia Citrus Lot RM-284</h4>
+              <p className="text-[13px] text-[#5F6875] mt-1 leading-[20px]">
+                Supplier CoA indicated raw concentrate viscosity at <strong>68.2 cP vs 62.8 cP standard</strong>, introduced into batch PB-ORG-1008 at 08:30 AM.
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-[#E4E7EB] text-[12px] text-[#18202A]">
+              <strong>Physical effect:</strong> Elevated line hydraulic backpressure by +0.2 bar, stressing worn diaphragm seals.
+            </div>
+          </div>
+
+          {/* Signal 3: Waste & Scrap Telemetry */}
+          <div className="p-4 bg-white rounded-xl border border-[#E4E7EB] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-bold uppercase tracking-wider text-[#D92D20] flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5" />
+                <span>Signal 3: Scrap & Waste</span>
+              </span>
+              <span className="text-[11px] font-mono text-[#D92D20] bg-[#FEF3F2] px-2 py-0.5 rounded font-semibold">
+                86 kg ($516) Scrapped
+              </span>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-[15px] text-[#18202A]">Checkweigher Rejects & Dribble</h4>
+              <p className="text-[13px] text-[#5F6875] mt-1 leading-[20px]">
+                Mettler checkweigher rejected <strong>420 underfill bottles</strong> and optical sensors logged <strong>86 kg nozzle dribble loss</strong> during Shift B.
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-[#E4E7EB] text-[12px] text-[#18202A]">
+              <strong>Physical effect:</strong> Erratic shut-off valve timing created bottle lip overflow and net fill under-dosing.
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 bg-[#EEF3FF] rounded-lg border border-[#D9E4FF] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[13px]">
+          <div className="text-[#18202A]">
+            <strong>Cross-Disciplinary Finding:</strong> Machine mechanical wear is the primary constraint. Batch viscosity variation exacerbated the bottleneck but did not initiate it.
+          </div>
+          <button
+            onClick={() => setActiveTab('waste-energy')}
+            className="text-[#2F5BFF] hover:text-[#2448D8] font-semibold flex items-center gap-1 shrink-0"
+          >
+            <span>View Waste Log Detail</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
       {/* Section D: Root Cause Analysis */}
       <div className="card-base">
         <h2 className="text-[22px] leading-[30px] font-semibold text-[#18202A] mb-2">
@@ -585,11 +693,16 @@ export function InvestigationsModule() {
           </div>
 
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">
-            <div className="text-[14px] text-[#5F6875]">Material Scrap</div>
-            <div className="text-[28px] leading-[36px] font-semibold text-[#18202A] mt-1">
+            <div className="text-[14px] text-[#5F6875] flex items-center justify-between">
+              <span>Material Scrap</span>
+              <span className="text-[11px] font-mono font-medium text-[#2F5BFF]">Lot RM-284</span>
+            </div>
+            <div className="text-[28px] leading-[36px] font-semibold text-[#18202A] mt-1 font-mono tabular-nums">
               {businessImpact.materialWasteKg} kg
             </div>
-            <div className="text-[13px] text-[#8A93A0] mt-1">cost: ${businessImpact.materialWasteCost}</div>
+            <div className="text-[13px] text-[#D92D20] mt-1 font-mono tabular-nums">
+              loss: ${businessImpact.materialWasteCost} (Spill & Rejects)
+            </div>
           </div>
 
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">

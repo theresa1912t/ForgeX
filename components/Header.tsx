@@ -31,11 +31,14 @@ export function Header({ onToggleNotifications, unreadCount }: HeaderProps) {
     setCurrentRole,
     setActiveTab,
     resetDemoToHeroState,
+    timeFilterLabel,
+    setTimeFilterPreset,
+    selectedShift,
+    showToast,
   } = useFactory();
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showFactoryMenu, setShowFactoryMenu] = useState(false);
-  const [dateRange, setDateRange] = useState('Today (Shift B · 07:00 - 15:00)');
   const [searchQuery, setSearchQuery] = useState('');
 
   const selectedFactory = factories.find((f) => f.id === selectedFactoryId) || factories[0];
@@ -85,19 +88,28 @@ export function Header({ onToggleNotifications, unreadCount }: HeaderProps) {
           )}
         </div>
 
-        {/* Date / Shift Picker */}
-        <div className="h-10 flex items-center gap-2 px-3.5 text-[14px] text-[#5F6875] bg-[#FFFFFF] border border-[#E4E7EB] rounded-lg">
+        {/* Global Shift & Temporal Scope Selector (Single Source of Truth) */}
+        <div className="h-10 flex items-center gap-2 px-3.5 text-[14px] text-[#5F6875] bg-[#FFFFFF] border border-[#E4E7EB] rounded-lg hover:border-[#D0D5DD] transition-colors">
           <Calendar className="w-4 h-4 text-[#8A93A0]" />
+          {selectedShift === 'shift-b' && (
+            <span className="w-2 h-2 rounded-full bg-[#12B76A] animate-pulse shrink-0" title="Live Shop Floor Shift" />
+          )}
           <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="bg-transparent border-none text-[14px] font-normal text-[#18202A] focus:outline-none cursor-pointer"
+            value={timeFilterLabel}
+            onChange={(e) => {
+              const newLabel = e.target.value;
+              setTimeFilterPreset(newLabel);
+              showToast(`Temporal scope synchronized to ${newLabel}`, 'info');
+            }}
+            aria-label="Global Shift and Time Filter"
+            className="bg-transparent border-none text-[14px] font-medium text-[#18202A] focus:outline-none cursor-pointer pr-1"
           >
-            <option value="Today (Shift B · 07:00 - 15:00)">Today (Shift B · 07:00 - 15:00)</option>
+            <option value="Today (Shift B · 07:00 - 15:00)">Today (Shift B · 07:00 - 15:00 · Live)</option>
             <option value="Shift A (Previous · 23:00 - 07:00)">Shift A (Previous · 23:00 - 07:00)</option>
-            <option value="Last 24 Hours">Last 24 Hours</option>
-            <option value="Last 7 Days">Last 7 Days</option>
-            <option value="Month to Date">Month to Date (October 2026)</option>
+            <option value="Shift C (Evening · 15:00 - 23:00)">Shift C (Evening · 15:00 - 23:00)</option>
+            <option value="Last 24 Hours (All Shifts)">Last 24 Hours (All Shifts)</option>
+            <option value="Last 7 Days">Last 7 Days (Aggregated)</option>
+            <option value="Month to Date (October 2026)">Month to Date (October 2026)</option>
           </select>
         </div>
       </div>

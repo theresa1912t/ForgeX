@@ -18,6 +18,7 @@ import {
   MaintenanceRecord,
   DowntimeRecord,
   WasteRecord,
+  IngredientUsageRecord,
   EnergyRecord,
   QualityRecord,
   OperationalThresholds,
@@ -45,6 +46,7 @@ import {
   initialMaintenanceRecords,
   initialDowntimeRecords,
   initialWasteRecords,
+  initialIngredientUsageRecords,
   initialEnergyRecords,
   initialQualityRecords,
   initialThresholds,
@@ -80,10 +82,26 @@ interface FactoryContextType {
   selectedLineId: string | null;
   setSelectedLineId: (id: string | null) => void;
 
+  // Slide-over Investigation Drawer State
+  investigationDrawerOpen: boolean;
+  setInvestigationDrawerOpen: (open: boolean) => void;
+  activeDrawerInvestigationId: string | null;
+  openInvestigationDrawer: (investigationId?: string) => void;
+  closeInvestigationDrawer: () => void;
+
   // System Toast Feedback
   toast: { id: string; message: string; type: 'success' | 'info' | 'warning' } | null;
   showToast: (message: string, type?: 'success' | 'info' | 'warning') => void;
   clearToast: () => void;
+
+  // Global Shift & Time Temporal Scope (Single Source of Truth)
+  selectedShift: 'shift-b' | 'shift-a' | 'shift-c' | 'all';
+  setSelectedShift: (shift: 'shift-b' | 'shift-a' | 'shift-c' | 'all') => void;
+  selectedPeriod: 'today' | 'yesterday' | '7d' | 'last24h' | 'mtd';
+  setSelectedPeriod: (period: 'today' | 'yesterday' | '7d' | 'last24h' | 'mtd') => void;
+  timeFilterLabel: string;
+  setTimeFilterPreset: (presetKey: string) => void;
+  filterMultiplier: number;
 
   // Industrial Device Connections & Telemetry Profiles
   deviceConnections: DeviceConnection[];
@@ -104,6 +122,7 @@ interface FactoryContextType {
   maintenanceRecords: MaintenanceRecord[];
   downtimeRecords: DowntimeRecord[];
   wasteRecords: WasteRecord[];
+  ingredientUsageRecords: IngredientUsageRecord[];
   energyRecords: EnergyRecord[];
   qualityRecords: QualityRecord[];
   thresholds: OperationalThresholds;
@@ -154,6 +173,21 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
   const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
 
+  // Investigation Slide-over Drawer State
+  const [investigationDrawerOpen, setInvestigationDrawerOpen] = useState<boolean>(false);
+  const [activeDrawerInvestigationId, setActiveDrawerInvestigationId] = useState<string | null>('inv-line3-hero');
+
+  const openInvestigationDrawer = (id?: string) => {
+    if (id) {
+      setActiveDrawerInvestigationId(id);
+    }
+    setInvestigationDrawerOpen(true);
+  };
+
+  const closeInvestigationDrawer = () => {
+    setInvestigationDrawerOpen(false);
+  };
+
   // System Toast Feedback State
   const [toast, setToast] = useState<{ id: string; message: string; type: 'success' | 'info' | 'warning' } | null>(null);
 
@@ -168,6 +202,68 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
   const clearToast = () => {
     setToast(null);
   };
+
+  // Global Shift & Period Temporal Scope (Single Source of Truth)
+  const [selectedShift, setSelectedShift] = useState<'shift-b' | 'shift-a' | 'shift-c' | 'all'>('shift-b');
+  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'yesterday' | '7d' | 'last24h' | 'mtd'>('today');
+  const [timeFilterLabel, setTimeFilterLabel] = useState<string>('Today (Shift B · 07:00 - 15:00)');
+
+  const setTimeFilterPreset = (presetKey: string) => {
+    switch (presetKey) {
+      case 'shift-b-live':
+      case 'Today (Shift B · 07:00 - 15:00)':
+        setSelectedShift('shift-b');
+        setSelectedPeriod('today');
+        setTimeFilterLabel('Today (Shift B · 07:00 - 15:00)');
+        break;
+      case 'shift-a':
+      case 'Shift A (Previous · 23:00 - 07:00)':
+        setSelectedShift('shift-a');
+        setSelectedPeriod('today');
+        setTimeFilterLabel('Shift A (Previous · 23:00 - 07:00)');
+        break;
+      case 'shift-c':
+      case 'Shift C (Evening · 15:00 - 23:00)':
+        setSelectedShift('shift-c');
+        setSelectedPeriod('yesterday');
+        setTimeFilterLabel('Shift C (Evening · 15:00 - 23:00)');
+        break;
+      case 'last24h':
+      case 'Last 24 Hours':
+        setSelectedShift('all');
+        setSelectedPeriod('last24h');
+        setTimeFilterLabel('Last 24 Hours (All Shifts)');
+        break;
+      case '7d':
+      case 'Last 7 Days':
+        setSelectedShift('all');
+        setSelectedPeriod('7d');
+        setTimeFilterLabel('Last 7 Days');
+        break;
+      case 'mtd':
+      case 'Month to Date (October 2026)':
+      case 'Month to Date':
+        setSelectedShift('all');
+        setSelectedPeriod('mtd');
+        setTimeFilterLabel('Month to Date (October 2026)');
+        break;
+      default:
+        setSelectedShift('shift-b');
+        setSelectedPeriod('today');
+        setTimeFilterLabel(presetKey || 'Today (Shift B · 07:00 - 15:00)');
+    }
+  };
+
+  const filterMultiplier = useMemo(() => {
+    if (selectedPeriod === 'yesterday') return 0.94;
+    if (selectedPeriod === '7d') return 6.8;
+    if (selectedPeriod === 'last24h') return 2.85;
+    if (selectedPeriod === 'mtd') return 24.5;
+    if (selectedShift === 'shift-a') return 0.98;
+    if (selectedShift === 'shift-c') return 0.92;
+    if (selectedShift === 'all') return 2.85;
+    return 1.0;
+  }, [selectedPeriod, selectedShift]);
 
   const openInvestigation = (id: string, fromTab?: string) => {
     setPreviousTab(fromTab || activeTab);
@@ -190,6 +286,7 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>(initialMaintenanceRecords);
   const [downtimeRecords, setDowntimeRecords] = useState<DowntimeRecord[]>(initialDowntimeRecords);
   const [wasteRecords, setWasteRecords] = useState<WasteRecord[]>(initialWasteRecords);
+  const [ingredientUsageRecords, setIngredientUsageRecords] = useState<IngredientUsageRecord[]>(initialIngredientUsageRecords);
   const [energyRecords, setEnergyRecords] = useState<EnergyRecord[]>(initialEnergyRecords);
   const [qualityRecords, setQualityRecords] = useState<QualityRecord[]>(initialQualityRecords);
   const [thresholds, setThresholds] = useState<OperationalThresholds>(initialThresholds);
@@ -559,6 +656,8 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
     setMaintenanceRecords(initialMaintenanceRecords);
     setDeviceConnections(initialDeviceConnections);
     setMachineProfiles(initialMachineProfiles);
+    setWasteRecords(initialWasteRecords);
+    setIngredientUsageRecords(initialIngredientUsageRecords);
     setSelectedAlertId('alt-line3-loss');
     setSelectedInvestigationId('inv-line3-hero');
     addNotification({
@@ -598,9 +697,21 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         setSelectedMachineId,
         selectedLineId,
         setSelectedLineId,
+        investigationDrawerOpen,
+        setInvestigationDrawerOpen,
+        activeDrawerInvestigationId,
+        openInvestigationDrawer,
+        closeInvestigationDrawer,
         toast,
         showToast,
         clearToast,
+        selectedShift,
+        setSelectedShift,
+        selectedPeriod,
+        setSelectedPeriod,
+        timeFilterLabel,
+        setTimeFilterPreset,
+        filterMultiplier,
         productionLines,
         machines,
         products,
@@ -613,6 +724,7 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         maintenanceRecords,
         downtimeRecords,
         wasteRecords,
+        ingredientUsageRecords,
         energyRecords,
         qualityRecords,
         thresholds,

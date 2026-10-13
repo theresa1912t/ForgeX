@@ -301,15 +301,49 @@ export interface DowntimeRecord {
   estimatedImpactCost: number;
 }
 
+export interface IngredientUsageRecord {
+  id: string;
+  materialId: string;
+  materialName: string;
+  batchCode: string;
+  machineId: string;
+  machineName: string;
+  lineId: string;
+  lineName: string;
+  plannedQuantityKg: number;
+  actualQuantityKg: number;
+  yieldVariancePct: number;
+  scrapKg: number;
+  scrapCost: number;
+  unitOfMeasure: string;
+  status: 'Normal' | 'Variance Warning' | 'Anomaly Loss';
+  timestamp: string;
+}
+
+export type WasteDefectCategory =
+  | 'Overfill/Spill'
+  | 'Contamination'
+  | 'Underfill Rejection'
+  | 'Startup Purge'
+  | 'Packaging Tear'
+  | 'Off-Spec Viscosity';
+
 export interface WasteRecord {
   id: string;
+  materialId?: string;
   materialName: string;
   productionBatchCode: string;
   lineName: string;
+  machineId?: string;
+  machineName?: string;
   wasteQuantityKg: number;
   wasteType: string;
+  defectCategory?: WasteDefectCategory;
   wasteReason: 'Expired' | 'Spoiled' | 'Overproduction' | 'Preparation mistake' | 'Wrong order' | 'Damaged' | 'Process loss' | 'Other';
   wasteCost: number;
+  relatedAnomaly?: string;
+  relatedInvestigationId?: string;
+  recoveryActionTaken?: string;
   timestamp: string;
 }
 

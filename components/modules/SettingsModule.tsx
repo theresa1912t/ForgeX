@@ -58,7 +58,7 @@ export function SettingsModule() {
             Platform Configuration
           </div>
           <h1 className="text-[32px] leading-[40px] font-semibold text-[#18202A]">
-            Settings & Connectivity
+            Settings
           </h1>
           <p className="text-[15px] leading-[24px] text-[#5F6875] mt-2">
             Configure anomaly trigger bounds, industrial PLC/SCADA connectivity, manage user roles, and customize AI inference sensitivity.

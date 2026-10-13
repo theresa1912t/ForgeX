@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import { FactoryProvider, useFactory } from '@/lib/factoryStore';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { NotificationDrawer } from '@/components/NotificationDrawer';
+import { InvestigationDrawer } from '@/components/InvestigationDrawer';
 import { DataIngestionModal } from '@/components/DataIngestionModal';
 import { CheckCircle2, Sparkles, AlertTriangle, X } from 'lucide-react';
 
@@ -23,13 +24,32 @@ import { ActionsModule } from '@/components/modules/ActionsModule';
 import { AIAssistantModule } from '@/components/modules/AIAssistantModule';
 import { SettingsModule } from '@/components/modules/SettingsModule';
 
+const emptySubscribe = () => () => {};
+
 function AppContent() {
+  const isClient = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+
   const { activeTab, notifications, toast, clearToast } = useFactory();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isIngestionOpen, setIsIngestionOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  if (!isClient) {
+    return (
+      <div className="flex min-h-screen bg-[#F7F8FA] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-[#2F5BFF] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[13px] font-medium text-[#5F6875]">Initializing FactoryLens Operations...</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderActiveModule = () => {
     switch (activeTab) {
@@ -84,6 +104,9 @@ function AppContent() {
           </div>
         </main>
       </div>
+
+      {/* Slide-over Right Investigation Drawer */}
+      <InvestigationDrawer />
 
       {/* In-App Notifications Drawer */}
       <NotificationDrawer

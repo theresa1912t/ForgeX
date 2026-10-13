@@ -1,6 +1,6 @@
 {
-  "summary":  "Rencana implementasi integrasi Data Sources & Device Connections pada FactoryLens. Menambahkan konfigurasi koneksi industrial IoT (OPC UA, MQTT, SCADA Historian), pemetaan tag sensor mesin M-01 s/d M-06, uji koneksi (ping/health check), serta transparansi sumber sinyal telemetri pada modul Machines dan Settings sesuai prinsip UX Nielsen, minimalis, dan desain B2B SaaS.",
-  "updatedAt":  "2026-10-10T07:53:55.214534852Z",
-  "requestFeedback":  true,
-  "userFacing":  true
+  "summary": "Single-slide concise brief in plain English for a hackathon PowerPoint slide. Features a punchy headline, 3 core pain points, 3 targeted solutions, and expected business impact.",
+  "updatedAt": "2026-10-12T15:39:30.861741372Z",
+  "requestFeedback": true,
+  "userFacing": true
 }

@@ -9,6 +9,7 @@ import {
   Layers,
   SearchCode,
   ArrowRight,
+  PanelRightOpen,
 } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/calculations';
 
@@ -21,6 +22,7 @@ export function LossExplorerModule() {
     products,
     setActiveTab,
     setSelectedInvestigationId,
+    openInvestigationDrawer,
   } = useFactory();
 
   const [dimension, setDimension] = useState<Dimension>('machine');
@@ -182,12 +184,12 @@ export function LossExplorerModule() {
                     {row.highlight ? (
                       <button
                         onClick={() => {
-                          setActiveTab('investigations');
-                          setSelectedInvestigationId('inv-line3-hero');
+                          openInvestigationDrawer('inv-line3-hero');
                         }}
-                        className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-md transition-colors shadow-sm"
+                        className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-md transition-colors shadow-sm inline-flex items-center gap-1.5"
                       >
-                        Investigate Loss
+                        <PanelRightOpen className="w-3.5 h-3.5" />
+                        <span>Investigate Loss</span>
                       </button>
                     ) : (
                       <button

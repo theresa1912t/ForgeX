@@ -31,7 +31,7 @@ export function QualityModule() {
             Quality Assurance
           </div>
           <h1 className="text-[32px] leading-[40px] font-semibold text-[#18202A]">
-            Quality & Defect Intelligence
+            Quality Intelligence
           </h1>
           <p className="text-[15px] leading-[24px] text-[#5F6875] mt-2">
             Checkweigher fill-height logs, carton seal integrity, and first-pass yield tracking.
