@@ -91,42 +91,42 @@ Today's factory output is running 6.8% below target overall, driven almost entir
 
 **RECOMMENDED NEXT ACTION**
 - Review Investigation #INV-LINE3-HERO in the Investigations module and approve the diaphragm seal kit replacement task.`;
-    } else if (lower.includes('defect') || lower.includes('quality') || lower.includes('rm-284')) {
+    } else if (lower.includes('defect') || lower.includes('quality') || lower.includes('lot-raw') || lower.includes('rm-284')) {
       text = `**DIRECT ANSWER**
-Defect spikes today are clustered in two areas: **Product A (Chocolate Milk 250ml)** ultrasonic carton seals on Line 2 (defect rate 2.45%), and **Orange Drink 500ml** fill-height variances on Line 3.
+Defect spikes today are clustered in two areas: **UHT Chocolate Milk 250ml** ultrasonic carton seals on Line 2 (defect rate 2.45%), and **UHT Fortified Whole Milk 1000ml** net weight variances on Line 3.
 
 **KEY OPERATIONAL EVIDENCE**
 - [FACT] Defect rate on Chocolate Milk increased 2.4× (48 defects per 1,000 units).
-- [FACT] Raw material batch **RM-284** (Valencia Citrus Concentrate) introduced at 08:30 AM exhibits a +8.4% viscosity deviation from supplier certificate of analysis.
-- [INFERENCE] While RM-284 added backpressure, sensor data indicates the primary driver on Line 3 is valve seal degradation rather than recipe chemistry.
+- [FACT] Raw material batch **LOT-RAW-904** (Grade A Raw Milk) introduced at 08:30 AM exhibits a +8.4% viscosity deviation from supplier certificate of analysis.
+- [INFERENCE] While LOT-RAW-904 added backpressure, sensor data indicates the primary driver on Line 3 is aseptic valve diaphragm degradation rather than recipe chemistry.
 
 **BUSINESS IMPACT**
-- 420 units flagged for rework ($630 rework cost).
-- 86 kg of citrus concentrate discarded due to checkweigher reject dumps ($516 waste cost).
+- 256 bottles flagged for checkweigher dump / rework ($422 cost).
+- 128 kg of raw milk scrapped due to checkweigher reject dumps and nozzle dribble ($768 waste cost).
 
 **RECOMMENDED NEXT ACTION**
-- Hold retain samples of Material Batch RM-284 for QA viscosity verification, and recalibrate ultrasonic horn on Line 2 Packaging Machine M-08.`;
+- Hold retain samples of Raw Milk Lot #LOT-RAW-904 for QA viscosity verification, and recalibrate ultrasonic horn on Line 2 Packaging Machine M-08.`;
     } else if (lower.includes('revenue') || lower.includes('cost') || lower.includes('risk') || lower.includes('financial')) {
       text = `**DIRECT ANSWER**
-Currently, **$8,350 in production value is at immediate risk today**, with **$5,830 already incurred** in lost throughput, rework, and scrap across Lines 2 and 3.
+Currently, **$7,450 in production value is at immediate risk today**, with **$4,896 already incurred** in lost throughput, rework, and scrap across Lines 2 and 3.
 
 **FINANCIAL BREAKDOWN**
-- **Lost Output Value**: $4,650 (Line 3: 3,720 units × $1.25)
-- **Quality Rework Cost**: $1,180 (Line 2 Chocolate Milk cartons)
-- **Material Waste Scrap**: $1,009 (Citrus concentrate + stabilizer rejects)
-- **Run-Rate Risk**: $1,400/hour on Line 3 if unresolved for the remaining 4 hours of Shift B.
+- **Lost Output Value**: $3,366 (Line 3: 2,040 bottles × $1.65)
+- **Quality Defect Cost**: $462 (Line 2 Chocolate Milk cartons)
+- **Material Waste Scrap**: $1,261 (Raw milk + stabilizer rejects)
+- **Run-Rate Risk**: $1,683/hour on Line 3 if unresolved for the remaining 4 hours of Shift B.
 
 **RECOMMENDED NEXT ACTION**
-- Execute the 30-minute valve seal replacement on Machine M-03 to recover approximately $5,600 in potential additional loss before shift close.`;
+- Execute the 30-minute aseptic valve seal replacement on Machine M-03 to recover approximately $6,732 in potential additional loss before shift close.`;
     } else {
       text = `**DIRECT ANSWER**
-FactoryLens operational intelligence has synthesized cross-domain data from SCADA, PLC registers, MES output, and QA checkweighers for FreshBite Foods Main Plant.
+FactoryLens operational intelligence has synthesized cross-domain data from SCADA, PLC registers, MES output, and QA checkweighers for LactaPure Midwest Aseptic Facility #1.
 
 **CURRENT PLANT HEALTH**
-- **Overall Line Efficiency**: 93.3% (Target: >95.0%)
-- **Active Critical Alerts**: 1 (Line 3 throughput drop -14%)
+- **Overall Line Efficiency**: 91.8% (Target: >95.0%)
+- **Active Critical Alerts**: 1 (Line 3 UHT Bottling throughput drop -18.9%)
 - **Active High Alerts**: 1 (Line 2 carton seal defect 2.45%)
-- **Loss Concentration**: 74% of all monetary loss is concentrated in the hot-fill filling station of Line 3.
+- **Loss Concentration**: 62% of today's total production loss is concentrated in Aseptic Filler M-03 on Line 3.
 
 **RECOMMENDED NEXT ACTION**
 - Navigate to the **Investigations** module to review Root Cause Analysis for Line 3, or review open tasks in the **Action Center**.`;

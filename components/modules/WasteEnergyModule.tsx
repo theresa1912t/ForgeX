@@ -149,12 +149,12 @@ export function WasteEnergyModule() {
           </button>
         </div>
         <p className="text-[14px] leading-[22px] text-[#18202A]">
-          Mechanical vibration harmonics on <strong>Filling Machine M-03</strong> (+38% vibration, 2.11s stroke cycle) caused nozzle dribble and checkweigher weight underfill. This directly resulted in <strong>128 kg of Valencia Citrus Concentrate (Lot RM-284)</strong> scrap valued at <strong>$768.00</strong> during Shift B.
+          Mechanical vibration harmonics on <strong>Aseptic Rotary Liquid Filler M-03</strong> (+38% vibration, 0.82s dosing cycle) caused nozzle dribble and checkweigher weight underfill. This directly resulted in <strong>128 kg / 256 bottles of Raw Grade A Farm Milk (Lot #LOT-RAW-904)</strong> scrap valued at <strong>$768.00</strong> during Shift B.
         </p>
         <div className="pt-2 border-t border-[#D9E4FF] flex flex-wrap items-center gap-6 text-[13px] text-[#5F6875]">
-          <span>Affected Batch: <strong className="text-[#18202A] font-mono">Lot RM-284 (PB-ORG-1008)</strong></span>
+          <span>Affected Batch: <strong className="text-[#18202A] font-mono">Lot #LOT-RAW-904 (PB-UHT-1008)</strong></span>
           <span>·</span>
-          <span>Equipment: <strong className="text-[#18202A]">Filling Machine M-03 (Line 3)</strong></span>
+          <span>Equipment: <strong className="text-[#18202A]">Aseptic Filler M-03 (Line 3)</strong></span>
           <span>·</span>
           <span>Yield Impact: <strong className="text-[#D92D20] font-mono">-6.9% BOM Variance</strong></span>
           <span>·</span>

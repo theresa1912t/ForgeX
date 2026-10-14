@@ -12,6 +12,7 @@ import {
   Cpu,
   ArrowRight,
   ShieldCheck,
+  Flame,
   Check,
   ClipboardList,
   Wrench,
@@ -30,6 +31,9 @@ export function InvestigationDrawer() {
     openInvestigation,
     approveRecommendation,
     createActionTaskFromRecommendation,
+    completeTaskWithOutcome,
+    actionTasks,
+    setActiveTab,
     showToast,
   } = useFactory();
 
@@ -41,6 +45,9 @@ export function InvestigationDrawer() {
   if (!investigation) return null;
 
   const isResolved = investigation.status === 'Resolved';
+  const linkedTask = actionTasks.find(
+    (t) => t.investigationId === investigation.id || t.alertId === 'alt-line3-loss'
+  );
 
   const handleApprove = (rec: RecommendedAction) => {
     approveRecommendation(investigation.id, rec.id);
@@ -126,6 +133,108 @@ export function InvestigationDrawer() {
 
         {/* Scrollable Content Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {/* Shift Supervisor Incident Progression Banner */}
+          {isResolved ? (
+            <div className="p-4 rounded-xl border border-[#A6F4C5] bg-[#EDFDF2]/80">
+              <div className="flex items-center gap-2 text-[14px] font-semibold text-[#18864B] mb-1">
+                <CheckCircle2 className="w-5 h-5 text-[#18864B]" />
+                <span>Incident Resolved & Line 3 Speed Recovered</span>
+              </div>
+              <p className="text-[13px] text-[#18864B] leading-relaxed">
+                Filling valve M-03-V2 diaphragm replaced. Output has successfully recovered to <strong>5,380 bottles/hr</strong> (+1,000 bottles/hr recovered).
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={() => {
+                    closeInvestigationDrawer();
+                    setActiveTab('materials');
+                    showToast('Opening Materials Ledger to verify scrap documentation.', 'info');
+                  }}
+                  className="h-8 px-3 text-[12px] font-semibold text-[#18202A] bg-white border border-[#D0D5DD] hover:bg-[#F7F8FA] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Flame className="w-3.5 h-3.5 text-[#D92D20]" />
+                  <span>Audit Scrap Ledger</span>
+                </button>
+                <button
+                  onClick={() => {
+                    closeInvestigationDrawer();
+                    setActiveTab('actions');
+                  }}
+                  className="h-8 px-3 text-[12px] font-semibold text-[#2F5BFF] hover:bg-[#EEF3FF] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <span>View Completed Action in Action Center</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : linkedTask ? (
+            <div className="p-4 rounded-xl border border-[#A6F4C5] bg-[#F6FEF9]">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#18864B]">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Work Order Dispatched: {linkedTask.title}</span>
+                </div>
+                <span className="text-[12px] text-[#5F6875] font-medium">Assigned: {linkedTask.assignedTo}</span>
+              </div>
+              <p className="text-[13px] text-[#5F6875] mb-3 leading-relaxed">
+                Maintenance technician has been dispatched. After replacing the EPDM aseptic diaphragm kit on Filler M-03, complete the fix below to restore line speed live on the dashboard.
+              </p>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={() => {
+                    completeTaskWithOutcome(
+                      linkedTask.id,
+                      'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
+                      'Completed replacement under +0.2 bar backpressure test. Output normalized.',
+                      1000
+                    );
+                    showToast('Maintenance marked complete. Line 3 speed restored to 5,380 bottles/hr!', 'success');
+                  }}
+                  className="h-8 px-3 text-[12px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Complete Maintenance & Restore Speed</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    closeInvestigationDrawer();
+                    setActiveTab('materials');
+                    showToast('Navigated to Materials. Use "Log Scrap Entry" to record rejected units.', 'info');
+                  }}
+                  className="h-8 px-3 text-[12px] font-semibold text-[#18202A] bg-white border border-[#D0D5DD] hover:bg-[#F7F8FA] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Flame className="w-3.5 h-3.5 text-[#D92D20]" />
+                  <span>Log Scrap Rejects for this Incident</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl border border-[#FEDF89] bg-[#FFFCF5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#B54708]">
+                  <AlertTriangle className="w-4 h-4 text-[#B54708]" />
+                  <span>Line 3 Speed Loss Alert: Immediate Action Required</span>
+                </div>
+                <p className="text-[12px] text-[#7A5E0B] mt-0.5">
+                  Review the mechanical root cause and dispatch a work order to maintenance to prevent further scrap.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const rec = investigation.recommendations[0];
+                  if (rec) {
+                    handleCreateTask(rec);
+                  }
+                }}
+                className="h-8 px-3 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap self-start sm:self-auto"
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span>1-Click Dispatch Order</span>
+              </button>
+            </div>
+          )}
+
           {/* 1. Financial & Output Impact Metrics */}
           <div className="grid grid-cols-3 gap-3">
             <div className="p-3.5 rounded-xl border border-[#FECDCA] bg-[#FEF3F2]/40">
@@ -238,16 +347,16 @@ export function InvestigationDrawer() {
                   </div>
                   <div>
                     <div className="text-[14px] font-medium text-[#18202A]">
-                      Batch RM-284 Syrup Viscosity
+                      Raw Milk Lot #LOT-RAW-904 Viscosity & Solids
                     </div>
                     <div className="text-[12px] text-[#5F6875]">
-                      Spec: 240 - 260 cP · Observed: 278 cP
+                      Spec: 1.8 - 2.1 cP · Observed: 2.28 cP
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[16px] font-semibold text-[#18202A]">278 cP</div>
-                  <div className="text-[12px] text-[#8A93A0]">+8.5% deviation</div>
+                  <div className="text-[16px] font-semibold text-[#18202A]">2.28 cP</div>
+                  <div className="text-[12px] text-[#8A93A0]">+8.4% deviation</div>
                 </div>
               </div>
             </div>

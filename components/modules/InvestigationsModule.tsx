@@ -458,14 +458,14 @@ export function InvestigationsModule() {
             </div>
 
             <div>
-              <h4 className="font-semibold text-[15px] text-[#18202A]">Valencia Citrus Lot RM-284</h4>
+              <h4 className="font-semibold text-[15px] text-[#18202A]">Raw Milk Lot #LOT-RAW-904</h4>
               <p className="text-[13px] text-[#5F6875] mt-1 leading-[20px]">
-                Supplier CoA indicated raw concentrate viscosity at <strong>68.2 cP vs 62.8 cP standard</strong>, introduced into batch PB-ORG-1008 at 08:30 AM.
+                Supplier CoA indicated raw milk viscosity at <strong>2.28 cP vs 2.10 cP standard</strong> with high solids-not-fat, introduced into batch PB-UHT-1008 at 08:30 AM.
               </p>
             </div>
 
             <div className="pt-2 border-t border-[#E4E7EB] text-[12px] text-[#18202A]">
-              <strong>Physical effect:</strong> Elevated line hydraulic backpressure by +0.2 bar, stressing worn diaphragm seals.
+              <strong>Physical effect:</strong> Elevated line hydraulic backpressure by +0.2 bar, stressing worn aseptic diaphragm seals.
             </div>
           </div>
 
@@ -695,7 +695,7 @@ export function InvestigationsModule() {
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">
             <div className="text-[14px] text-[#5F6875] flex items-center justify-between">
               <span>Material Scrap</span>
-              <span className="text-[11px] font-mono font-medium text-[#2F5BFF]">Lot RM-284</span>
+              <span className="text-[11px] font-mono font-medium text-[#2F5BFF]">Lot #LOT-RAW-904</span>
             </div>
             <div className="text-[28px] leading-[36px] font-semibold text-[#18202A] mt-1 font-mono tabular-nums">
               {businessImpact.materialWasteKg} kg

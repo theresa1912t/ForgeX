@@ -91,7 +91,7 @@ export function DashboardModule() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="text-[13px] font-medium text-[#5F6875] mb-1">
-            FreshBite Foods Main Plant · Shift B Active
+            LactaPure Midwest Aseptic Facility #1 · Shift B Active
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-[32px] leading-[40px] font-semibold text-[#18202A]">
@@ -674,7 +674,7 @@ export function DashboardModule() {
             • <strong>Line 3</strong> accounts for <strong>{isLine3Resolved ? 'resolved throughput' : '62% of today\'s total loss'}</strong> due to valve diaphragm friction on Machine M-03.
           </p>
           <p>
-            • Defects on <strong>Product A (Chocolate Milk)</strong> increased 2.4× shortly after <strong>Material Batch RM-284</strong> was introduced, though mechanical sealing wear was the primary driver.
+            • Line 3 speed drop occurred shortly after <strong>Raw Milk Lot #LOT-RAW-904</strong> was introduced (+8.4% viscosity), though aseptic valve diaphragm fatigue on Machine M-03 was the primary 68% driver.
           </p>
           <p>
             • <strong>Machine M-03</strong> generated the highest downtime impact this week ($8,420 across 3 related stoppages).

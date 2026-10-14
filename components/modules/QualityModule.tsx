@@ -85,7 +85,7 @@ export function QualityModule() {
         <Sparkles className="w-5 h-5 text-[#2F5BFF] shrink-0 mt-0.5" />
         <div className="text-[14px] leading-[22px] text-[#18202A]">
           <strong className="text-[#2F5BFF]">AI Cross-Domain Quality Correlation: </strong>
-          Defect rates on <strong>Line 3 (Orange Drink 500ml)</strong> jumped 2.1× due to erratic nozzle shut-off pressure on Machine M-03. While <strong>Material Batch RM-284</strong> (+8.4% viscosity) contributed fluid backpressure, valve diaphragm mechanical wear remains the 61% primary contributor.
+          Defect rates on <strong>Line 3 (UHT Fortified Whole Milk 1000ml)</strong> jumped 2.1× due to erratic nozzle shut-off pressure on Aseptic Filler M-03. While <strong>Raw Milk Lot #LOT-RAW-904</strong> (+8.4% viscosity) contributed fluid backpressure, valve diaphragm mechanical wear remains the 68% primary contributor.
         </div>
       </div>
 

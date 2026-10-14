@@ -115,7 +115,7 @@ export function HealthFormulaModal({ isOpen, onClose, machine }: HealthFormulaMo
           <div className="bg-[#EEF3FF] border border-[#C5D5FE] rounded-xl p-4 text-[13px] text-[#18202A] leading-relaxed flex items-start gap-3">
             <Info className="w-5 h-5 text-[#2F5BFF] shrink-0 mt-0.5" />
             <div>
-              <strong>Bagaimana Health Score dihitung?</strong> Skor ini bukan angka acak. Dihitung secara real-time dari 5 parameter telemetri fisik sensor IoT/PLC berbobot (ISO 10816 mechanical vibration standard + deviasi cycle time nominal).
+              <strong>How is the Health Score calculated?</strong> This score is dynamically computed in real-time from 5 weighted physical IoT/PLC telemetry parameters (ISO 10816 mechanical vibration standards and nominal cycle time variance).
             </div>
           </div>
 

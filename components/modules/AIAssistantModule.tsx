@@ -46,7 +46,7 @@ export function AIAssistantModule() {
     {
       id: 'msg-welcome',
       sender: 'assistant',
-      text: `Hello Marcus. I am your FactoryLens Operations Intelligence Copilot. I have indexed real-time SCADA throughput, machine sensor vibrations, checkweigher defects, and raw material lots for FreshBite Foods Main Plant.
+      text: `Hello Marcus. I am your FactoryLens Operations Intelligence Copilot. I have indexed real-time SCADA throughput, machine sensor vibrations, checkweigher defects, and raw material lots for LactaPure Midwest Aseptic Facility #1.
 
 Ask me any operational question about production loss, machine health, root causes, or financial impact.`,
       timestamp: '10:45 AM',
@@ -59,7 +59,7 @@ Ask me any operational question about production loss, machine health, root caus
     'What caused the increase in defects on Line 3?',
     'Which issue should we fix first?',
     'How much revenue is currently at risk across the plant?',
-    'What changed after Material Batch RM-284 was introduced?',
+    'What changed after Raw Milk Lot #LOT-RAW-904 was introduced?',
   ];
 
   const handleSend = async (queryToSend?: string) => {
@@ -84,11 +84,11 @@ Ask me any operational question about production loss, machine health, root caus
         body: JSON.stringify({
           prompt: q,
           context: {
-            facility: 'FreshBite Foods Main Plant',
+            facility: 'LactaPure Midwest Aseptic Facility #1',
             lines: productionLines.map((l) => ({ name: l.name, actual: l.currentUnitsPerHour, target: l.targetUnitsPerHour, loss: l.productionLossUnits })),
             machines: machines.map((m) => ({ name: m.name, status: m.status, vibration: m.vibrationMmS, lossContributionPct: m.productionLossContributionPct })),
             activeAlerts: alerts.filter((a) => a.status !== 'Resolved').map((a) => ({ title: a.title, severity: a.severity, impact: a.estimatedImpact })),
-            materialBatch: materialBatches.find((b) => b.batchCode === 'RM-284'),
+            materialBatch: materialBatches.find((b) => b.batchCode === 'LOT-RAW-904'),
           },
         }),
       });

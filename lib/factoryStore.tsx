@@ -128,6 +128,11 @@ interface FactoryContextType {
   thresholds: OperationalThresholds;
   updateThresholds: (thresholds: Partial<OperationalThresholds>) => void;
 
+  // Material & Waste Mutations
+  addMaterialBatch: (batch: Omit<MaterialBatch, 'id'>) => void;
+  addWasteRecord: (waste: Omit<WasteRecord, 'id' | 'timestamp'>) => void;
+  adjustMaterialStock: (materialId: string, newStock: number, reason?: string) => void;
+
   // Hero Workflow Mutations
   approveRecommendation: (investigationId: string, recommendationId: string) => void;
   createActionTaskFromRecommendation: (
@@ -325,6 +330,50 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
       };
     });
     showToast(`Machine telemetry binding updated`, 'success');
+  };
+
+  // Material & Waste Operations
+  const addMaterialBatch = (batchData: Omit<MaterialBatch, 'id'>) => {
+    const newBatch: MaterialBatch = {
+      ...batchData,
+      id: `mb-user-${Date.now()}`,
+    };
+    setMaterialBatches((prev) => [newBatch, ...prev]);
+    // Synchronously increase the corresponding material warehouse stock
+    setMaterials((prev) =>
+      prev.map((m) =>
+        m.id === batchData.materialId
+          ? {
+              ...m,
+              currentStock: m.currentStock + batchData.quantity,
+              activeBatchCount: m.activeBatchCount + 1,
+            }
+          : m
+      )
+    );
+    showToast(`Material lot ${newBatch.batchCode} received (+${newBatch.quantity} ${newBatch.unitOfMeasure})`, 'success');
+  };
+
+  const addWasteRecord = (wasteData: Omit<WasteRecord, 'id' | 'timestamp'>) => {
+    const newRecord: WasteRecord = {
+      ...wasteData,
+      id: `w-user-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    };
+    setWasteRecords((prev) => [newRecord, ...prev]);
+    showToast(`Scrap entry logged for ${newRecord.lineName}: ${newRecord.wasteQuantityKg} kg ($${newRecord.wasteCost.toFixed(2)})`, 'warning');
+  };
+
+  const adjustMaterialStock = (materialId: string, newStock: number, reason?: string) => {
+    setMaterials((prev) =>
+      prev.map((m) =>
+        m.id === materialId
+          ? { ...m, currentStock: Math.max(0, newStock) }
+          : m
+      )
+    );
+    const targetMat = materials.find((m) => m.id === materialId);
+    showToast(`Inventory stock adjusted for ${targetMat?.name || materialId}: ${newStock} ${targetMat?.unitOfMeasure || 'units'}${reason ? ` (${reason})` : ''}`, 'info');
   };
 
   // Computed User & Role
@@ -558,10 +607,10 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
             ? {
                 ...l,
                 status: 'Running',
-                currentUnitsPerHour: 4940,
-                efficiencyPct: 98.8,
-                defectRatePct: 0.52,
-                productionLossUnits: 280,
+                currentUnitsPerHour: 5380,
+                efficiencyPct: 99.6,
+                defectRatePct: 0.45,
+                productionLossUnits: 140,
                 activeAlertCount: 0,
               }
             : l
@@ -575,11 +624,11 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
             ? {
                 ...m,
                 status: 'Normal',
-                healthScorePct: 95,
-                vibrationMmS: 2.15,
-                cycleTimeSec: 1.82,
+                healthScorePct: 96,
+                vibrationMmS: 1.85,
+                cycleTimeSec: 0.67,
                 activeAlertCount: 0,
-                productionLossContributionPct: 5,
+                productionLossContributionPct: 3,
               }
             : m
         )
@@ -589,14 +638,14 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
       const newMaintRecord: MaintenanceRecord = {
         id: `maint-${Date.now()}`,
         machineId: 'mach-m03',
-        machineName: 'Filling Machine M-03',
+        machineName: 'Aseptic Rotary Liquid Filler M-03',
         date: '2026-10-08',
         type: 'Corrective',
-        issue: 'Replaced degraded filling valve M-03-V2 diaphragm seal',
-        failureType: 'Piston Valve Diaphragm Replacement',
+        issue: 'Replaced degraded aseptic filling valve M-03-V2 diaphragm seal',
+        failureType: 'Aseptic Valve Diaphragm Replacement',
         repairDurationMinutes: 28,
         technician: task.assignedTo || 'Carlos Ruiz',
-        notes: resolutionNotes || 'Installed OEM elastomer seal kit #FB-882. Recalibrated stroke pressure to 3.1 bar.',
+        notes: resolutionNotes || 'Installed OEM EPDM aseptic diaphragm kit #LP-DIA-04. Recalibrated stroke pressure to 3.2 bar.',
         status: 'Completed',
       };
       setMaintenanceRecords((prev) => [newMaintRecord, ...prev]);
@@ -662,13 +711,13 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
     setSelectedInvestigationId('inv-line3-hero');
     addNotification({
       title: 'Demo State Reset',
-      message: 'FreshBite Foods scenario re-initialized to Hero Incident: Line 3 production loss (-14%).',
+      message: 'LactaPure Dairy scenario re-initialized to Hero Incident: Line 3 UHT Bottling loss (-18.9%).',
       severity: 'Low',
       category: 'Production',
       linkModule: 'dashboard',
     });
 
-    showToast('Demo scenario reset to initial incident state (Line 3 loss -14%)', 'info');
+    showToast('Demo scenario reset to initial dairy incident state (Line 3 loss -18.9%)', 'info');
   };
 
   return (
@@ -734,6 +783,9 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         testConnection,
         addDeviceConnection,
         updateMachineProfileGateway,
+        addMaterialBatch,
+        addWasteRecord,
+        adjustMaterialStock,
         approveRecommendation,
         createActionTaskFromRecommendation,
         updateTaskStatus,

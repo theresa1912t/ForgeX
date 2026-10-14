@@ -11,6 +11,8 @@ import {
   SearchCode,
   Layers,
   ArrowRight,
+  PanelRightOpen,
+  Flame,
 } from 'lucide-react';
 import { formatNumber } from '@/lib/calculations';
 
@@ -21,6 +23,7 @@ export function ProductionModule() {
     setSelectedLineId,
     machines,
     setActiveTab,
+    openInvestigationDrawer,
     setSelectedInvestigationId,
   } = useFactory();
 
@@ -67,17 +70,27 @@ export function ProductionModule() {
           const isSelected = line.id === selectedLine.id;
           const variance = ((line.currentUnitsPerHour - line.targetUnitsPerHour) / line.targetUnitsPerHour) * 100;
           return (
-            <div
+            <button
               key={line.id}
+              type="button"
               onClick={() => setSelectedLineId(line.id)}
-              className={`card-base cursor-pointer transition-all ${
+              className={`card-base cursor-pointer transition-all text-left w-full ${
                 isSelected
-                  ? 'border-[#2F5BFF] bg-[#F8FAFF]'
-                  : 'hover:border-[#D0D5DD] bg-white'
+                  ? 'border-2 border-[#2F5BFF] ring-2 ring-[#2F5BFF]/25 shadow-sm bg-white'
+                  : line.activeAlertCount > 0
+                  ? 'border border-[#FEDF89] ring-2 ring-[#FEDF89]/40 bg-white hover:border-[#FDB022]'
+                  : 'hover:border-[#CBD5E1] hover:shadow-xs bg-white border border-[#E4E7EB]'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[16px] font-semibold text-[#18202A]">{line.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[16px] font-semibold text-[#18202A]">{line.name}</span>
+                  {isSelected && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#EEF3FF] text-[#2F5BFF] border border-[#C7D7FE]">
+                      Active
+                    </span>
+                  )}
+                </div>
                 <span
                   className={`h-7 px-2.5 rounded-[6px] text-[13px] font-medium inline-flex items-center ${
                     line.status === 'Running'
@@ -112,7 +125,7 @@ export function ProductionModule() {
                 <span>Defects: {line.defectRatePct}%</span>
                 <span>Downtime: {line.downtimeMinutesToday}m</span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -123,26 +136,45 @@ export function ProductionModule() {
           <div>
             <div className="flex items-center gap-3">
               <h2 className="text-[22px] leading-[30px] font-semibold text-[#18202A]">
-                {selectedLine.name} Details
+                {selectedLine.name} Overview
               </h2>
               <span className="h-7 px-2.5 rounded-[6px] text-[13px] font-medium bg-[#F1F3F5] text-[#5F6875]">
                 Code {selectedLine.code}
               </span>
             </div>
-            <p className="text-[14px] text-[#5F6875] mt-1">{selectedLine.description}</p>
+            <p className="text-[14px] text-[#5F6875] mt-1">
+              Real-time telemetry, connected machinery status, and downtime breakdown for{' '}
+              <strong className="text-[#18202A]">{selectedLine.name}</strong>.
+            </p>
           </div>
 
-          {selectedLine.activeAlertCount > 0 && (
-            <button
-              onClick={() => {
-                setActiveTab('investigations');
-                setSelectedInvestigationId('inv-line3-hero');
-              }}
-              className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-sm flex items-center gap-2"
-            >
-              <SearchCode className="w-4 h-4" />
-              <span>Launch AI Investigation</span>
-            </button>
+          {selectedLine.activeAlertCount > 0 ? (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => openInvestigationDrawer('inv-line3-hero')}
+                className="h-10 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+              >
+                <PanelRightOpen className="w-4 h-4" />
+                <span>Investigate Anomaly</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('materials')}
+                className="h-10 px-3.5 text-[13px] font-semibold text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#D0D5DD] rounded-xl transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+              >
+                <Flame className="w-4 h-4 text-[#D92D20]" />
+                <span>Log Line Scrap</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setActiveTab('materials')}
+                className="h-10 px-3.5 text-[13px] font-semibold text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#D0D5DD] rounded-xl transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+              >
+                <Flame className="w-4 h-4 text-[#D92D20]" />
+                <span>Log Scrap</span>
+              </button>
+            </div>
           )}
         </div>
 
