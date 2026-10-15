@@ -9,15 +9,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   ExternalLink,
-  Cpu,
   ArrowRight,
-  ShieldCheck,
   Flame,
   Check,
   ClipboardList,
   Wrench,
   Activity,
-  Layers,
+  TrendingDown,
 } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/calculations';
 import { RecommendedAction } from '@/lib/types';
@@ -49,16 +47,29 @@ export function InvestigationDrawer() {
     (t) => t.investigationId === investigation.id || t.alertId === 'alt-line3-loss'
   );
 
+  const primaryRec = investigation.recommendations?.[0] || {
+    id: 'rec-1',
+    investigationId: investigation.id,
+    title: 'Inspect filling valve M-03-V2 & replace worn diaphragm seal',
+    reason: 'Mechanical wear on elastomer diaphragm head #4/#8 is causing fluid throttling, pressure drop, and vibration.',
+    priority: 'Critical',
+    owner: 'Maintenance',
+    estimatedEffort: '30 minutes',
+    expectedImpact: 'Recover 1,000 bottles/hr (~$1,683/hr revenue)',
+    evidence: 'Vibration +38%, cycle time +22%',
+    status: 'Pending',
+  };
+
   const handleApprove = (rec: RecommendedAction) => {
     approveRecommendation(investigation.id, rec.id);
     showToast(`Approved recommendation: "${rec.title}"`, 'success');
   };
 
   const handleCreateTask = (rec: RecommendedAction) => {
-    const assignee = rec.owner === 'Maintenance' ? 'Tom Reynolds' : 'Sarah Jenkins';
+    const assignee = 'Carlos Ruiz';
     const dueDate = 'Today (Within 45 mins)';
     createActionTaskFromRecommendation(investigation.id, rec, assignee, dueDate);
-    showToast(`Created work order for ${assignee}: "${rec.title}"`, 'success');
+    showToast(`Dispatched work order to ${assignee}: "${rec.title}"`, 'success');
   };
 
   const handleOpenFullWorkbench = () => {
@@ -68,15 +79,16 @@ export function InvestigationDrawer() {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-[#18202A]/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
-      <div className="w-full max-w-[640px] bg-white h-full shadow-2xl flex flex-col border-l border-[#E4E7EB] animate-in slide-in-from-right duration-300">
-        {/* Drawer Header */}
-        <div className="px-6 py-4 border-b border-[#E4E7EB] bg-white flex items-center justify-between shrink-0">
+      <div className="w-full max-w-[580px] bg-white h-full shadow-2xl flex flex-col border-l border-[#E4E7EB] animate-in slide-in-from-right duration-300">
+        
+        {/* 1. Clean Drawer Header Bar (Redundant Line/Machine text removed) */}
+        <div className="px-6 py-3.5 border-b border-[#E4E7EB] bg-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <span
-              className={`h-7 px-2.5 rounded-[6px] text-[13px] font-medium inline-flex items-center ${
+              className={`h-7 px-2.5 rounded-[6px] text-[13px] font-semibold inline-flex items-center ${
                 isResolved
-                  ? 'bg-[#EDFDF2] text-[#18864B]'
-                  : 'bg-[#FEF3F2] text-[#D92D20]'
+                  ? 'bg-[#EDFDF2] text-[#18864B] border border-[#A6F4C5]'
+                  : 'bg-[#FEF3F2] text-[#D92D20] border border-[#FECDCA]'
               }`}
             >
               {isResolved ? (
@@ -91,15 +103,12 @@ export function InvestigationDrawer() {
                 </>
               )}
             </span>
-            <span className="text-[13px] font-medium text-[#5F6875]">
-              {investigation.lineName} · {investigation.machineName}
-            </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleOpenFullWorkbench}
-              className="h-8 px-2.5 text-[13px] font-medium text-[#2F5BFF] hover:bg-[#EEF3FF] rounded-md transition-colors flex items-center gap-1.5"
+              className="h-8 px-2.5 text-[12px] font-semibold text-[#2F5BFF] hover:bg-[#EEF3FF] rounded-md transition-colors flex items-center gap-1.5 cursor-pointer"
               title="Open full interactive workbench view"
             >
               <span>Full Workbench</span>
@@ -107,7 +116,7 @@ export function InvestigationDrawer() {
             </button>
             <button
               onClick={closeInvestigationDrawer}
-              className="p-1.5 text-[#8A93A0] hover:text-[#18202A] hover:bg-[#F1F3F5] rounded-md transition-colors"
+              className="p-1.5 text-[#8A93A0] hover:text-[#18202A] hover:bg-[#F1F3F5] rounded-md transition-colors cursor-pointer"
               title="Close drawer"
             >
               <X className="w-5 h-5" />
@@ -115,33 +124,34 @@ export function InvestigationDrawer() {
           </div>
         </div>
 
-        {/* Drawer Title & Meta Banner */}
+        {/* 2. Drawer Title & Operational Context */}
         <div className="px-6 py-4 bg-[#F8FAFC] border-b border-[#E4E7EB] shrink-0">
-          <div className="text-[12px] font-semibold uppercase tracking-wider text-[#2F5BFF] flex items-center gap-1.5 mb-1">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-[#2F5BFF] flex items-center gap-1.5 mb-1">
             <Sparkles className="w-3.5 h-3.5" />
             AI Root-Cause Diagnosis
           </div>
-          <h2 className="text-[20px] font-semibold text-[#18202A] leading-snug">
+          <h2 className="text-[18px] font-bold text-[#18202A] leading-snug">
             {investigation.title}
           </h2>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[13px] text-[#5F6875]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[12px] text-[#5F6875]">
             <span>Product: <strong className="text-[#18202A]">{investigation.productName}</strong></span>
             <span>Shift: <strong className="text-[#18202A]">{investigation.shift}</strong></span>
-            <span>Triggered: <strong className="text-[#18202A]">{investigation.startTime}</strong></span>
+            <span>Started: <strong className="text-[#18202A]">{investigation.startTime}</strong></span>
           </div>
         </div>
 
-        {/* Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-          {/* Shift Supervisor Incident Progression Banner */}
+        {/* 3. Streamlined Content Body (Low Cognitive Load) */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          
+          {/* A. Status & Progression Banner */}
           {isResolved ? (
             <div className="p-4 rounded-xl border border-[#A6F4C5] bg-[#EDFDF2]/80">
-              <div className="flex items-center gap-2 text-[14px] font-semibold text-[#18864B] mb-1">
-                <CheckCircle2 className="w-5 h-5 text-[#18864B]" />
-                <span>Incident Resolved & Line 3 Speed Recovered</span>
+              <div className="flex items-center gap-2 text-[14px] font-bold text-[#18864B] mb-1">
+                <CheckCircle2 className="w-4 h-4 text-[#18864B]" />
+                <span>Line 3 Speed Fully Restored (5,380 bph)</span>
               </div>
               <p className="text-[13px] text-[#18864B] leading-relaxed">
-                Filling valve M-03-V2 diaphragm replaced. Output has successfully recovered to <strong>5,380 bottles/hr</strong> (+1,000 bottles/hr recovered).
+                Filling valve M-03-V2 diaphragm seal replaced. Output recovered by <strong>+1,000 bottles/hr</strong> and defect rates returned to normal.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2.5">
                 <button
@@ -162,72 +172,53 @@ export function InvestigationDrawer() {
                   }}
                   className="h-8 px-3 text-[12px] font-semibold text-[#2F5BFF] hover:bg-[#EEF3FF] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                 >
-                  <span>View Completed Action in Action Center</span>
+                  <span>View in Action Center</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           ) : linkedTask ? (
             <div className="p-4 rounded-xl border border-[#A6F4C5] bg-[#F6FEF9]">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#18864B]">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2 text-[13px] font-bold text-[#18864B]">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Work Order Dispatched: {linkedTask.title}</span>
+                  <span>Work Order Dispatched: Carlos Ruiz</span>
                 </div>
-                <span className="text-[12px] text-[#5F6875] font-medium">Assigned: {linkedTask.assignedTo}</span>
+                <span className="text-[11px] font-semibold text-[#18864B] px-2 py-0.5 rounded bg-[#EDFDF2] border border-[#A6F4C5]">
+                  In Progress
+                </span>
               </div>
               <p className="text-[13px] text-[#5F6875] mb-3 leading-relaxed">
-                Maintenance technician has been dispatched. After replacing the EPDM aseptic diaphragm kit on Filler M-03, complete the fix below to restore line speed live on the dashboard.
+                EPDM diaphragm kit replacement scheduled on Aseptic Filler M-03. After installation, verify line recovery below:
               </p>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  onClick={() => {
-                    completeTaskWithOutcome(
-                      linkedTask.id,
-                      'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
-                      'Completed replacement under +0.2 bar backpressure test. Output normalized.',
-                      1000
-                    );
-                    showToast('Maintenance marked complete. Line 3 speed restored to 5,380 bottles/hr!', 'success');
-                  }}
-                  className="h-8 px-3 text-[12px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Complete Maintenance & Restore Speed</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    closeInvestigationDrawer();
-                    setActiveTab('materials');
-                    showToast('Navigated to Materials. Use "Log Scrap Entry" to record rejected units.', 'info');
-                  }}
-                  className="h-8 px-3 text-[12px] font-semibold text-[#18202A] bg-white border border-[#D0D5DD] hover:bg-[#F7F8FA] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Flame className="w-3.5 h-3.5 text-[#D92D20]" />
-                  <span>Log Scrap Rejects for this Incident</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 rounded-xl border border-[#FEDF89] bg-[#FFFCF5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#B54708]">
-                  <AlertTriangle className="w-4 h-4 text-[#B54708]" />
-                  <span>Line 3 Speed Loss Alert: Immediate Action Required</span>
-                </div>
-                <p className="text-[12px] text-[#7A5E0B] mt-0.5">
-                  Review the mechanical root cause and dispatch a work order to maintenance to prevent further scrap.
-                </p>
-              </div>
               <button
                 onClick={() => {
-                  const rec = investigation.recommendations[0];
-                  if (rec) {
-                    handleCreateTask(rec);
-                  }
+                  completeTaskWithOutcome(
+                    linkedTask.id,
+                    'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
+                    'Completed replacement under +0.2 bar backpressure test. Output normalized.',
+                    1000
+                  );
+                  showToast('Maintenance marked complete. Line 3 speed restored to 5,380 bottles/hr!', 'success');
                 }}
-                className="h-8 px-3 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                className="w-full h-9 px-4 text-[13px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Complete Maintenance & Restore Speed</span>
+              </button>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-xl border border-[#FEDF89] bg-[#FFFBF5] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-[#B54708] shrink-0" />
+                <div>
+                  <div className="text-[13px] font-bold text-[#B54708]">Line 3 Speed Loss Alert</div>
+                  <div className="text-[12px] text-[#7A5E0B]">Action required to prevent further scrap</div>
+                </div>
+              </div>
+              <button
+                onClick={() => handleCreateTask(primaryRec)}
+                className="h-8 px-3.5 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
               >
                 <ClipboardList className="w-3.5 h-3.5" />
                 <span>1-Click Dispatch Order</span>
@@ -235,268 +226,162 @@ export function InvestigationDrawer() {
             </div>
           )}
 
-          {/* 1. Financial & Output Impact Metrics */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3.5 rounded-xl border border-[#FECDCA] bg-[#FEF3F2]/40">
-              <div className="text-[12px] font-medium text-[#5F6875]">Revenue at Risk</div>
-              <div className="text-[20px] font-semibold text-[#D92D20] mt-1">
-                {formatCurrency(investigation.businessImpact?.estimatedRevenueLoss || 4650)}
-              </div>
-              <div className="text-[12px] text-[#D92D20] mt-0.5 font-medium">
-                ${investigation.businessImpact?.currentLossRatePerHour || 1400}/hr burn rate
-              </div>
+          {/* B. The Core Problem: Compact 2-Tile Financial & Throughput Impact */}
+          <div>
+            <div className="text-[12px] font-bold uppercase tracking-wider text-[#5F6875] mb-2">
+              Operational & Financial Impact
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3.5 rounded-xl border border-[#FECDCA] bg-[#FEF3F2]/40">
+                <div className="text-[12px] font-medium text-[#5F6875] flex items-center justify-between">
+                  <span>Speed Deficit</span>
+                  <TrendingDown className="w-3.5 h-3.5 text-[#D92D20]" />
+                </div>
+                <div className="text-[20px] font-bold text-[#D92D20] mt-1 font-mono">
+                  {investigation.outputVariancePct}%
+                </div>
+                <div className="text-[12px] text-[#D92D20] mt-0.5 font-medium">
+                  4,380 / 5,400 bph (-1,020 bph)
+                </div>
+              </div>
 
-            <div className="p-3.5 rounded-xl border border-[#E4E7EB] bg-white">
-              <div className="text-[12px] font-medium text-[#5F6875]">Throughput Deficit</div>
-              <div className="text-[20px] font-semibold text-[#18202A] mt-1">
-                {investigation.outputVariancePct}%
-              </div>
-              <div className="text-[12px] text-[#5F6875] mt-0.5">
-                -{formatNumber(investigation.businessImpact?.lostUnits || 3720)} units total
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-[#D9E4FF] bg-[#EEF3FF]/40">
-              <div className="text-[12px] font-medium text-[#5F6875]">AI Confidence</div>
-              <div className="text-[20px] font-semibold text-[#2F5BFF] mt-1">
-                {investigation.rootCauses[0]?.confidence || 94}%
-              </div>
-              <div className="text-[12px] text-[#2F5BFF] mt-0.5 font-medium">
-                High Multi-Factor Match
+              <div className="p-3.5 rounded-xl border border-[#FEDF89] bg-[#FFFBF5]">
+                <div className="text-[12px] font-medium text-[#5F6875]">Run-Rate Financial Loss</div>
+                <div className="text-[20px] font-bold text-[#B54708] mt-1 font-mono">
+                  ${investigation.businessImpact?.currentLossRatePerHour || 1683}/hr
+                </div>
+                <div className="text-[12px] text-[#7A5E0B] mt-0.5">
+                  {formatCurrency(investigation.businessImpact?.estimatedRevenueLoss || 3366)} shift loss
+                </div>
               </div>
             </div>
           </div>
 
-          {/* 2. Primary Root Cause Summary */}
+          {/* C. Primary Root Cause Synthesis (#1 Cause Only) */}
           <div className="p-4 rounded-xl border border-[#D9E4FF] bg-[#F8FAFF]">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-[#2F5BFF]" />
-              <span className="text-[14px] font-semibold text-[#18202A]">
-                Primary Root Cause
-              </span>
-              <span className="ml-auto text-[12px] font-semibold px-2 py-0.5 rounded bg-[#EEF3FF] text-[#2F5BFF]">
-                Rank #1
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 text-[13px] font-bold text-[#18202A]">
+                <Sparkles className="w-4 h-4 text-[#2F5BFF]" />
+                <span>Primary Root Cause (Rank #1)</span>
+              </div>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-[#EEF3FF] text-[#2F5BFF] border border-[#C7D7FE]">
+                68% Confidence
               </span>
             </div>
-            <p className="text-[14px] leading-[22px] text-[#18202A]">
-              {investigation.rootCauses[0]?.summary ||
-                'Mechanical wear in the filling nozzle diaphragm is generating excessive resistance during stroke return.'}
+
+            <p className="text-[13px] font-medium text-[#18202A] leading-relaxed">
+              {investigation.rootCauses[0]?.title ||
+                'Aseptic filling valve #4 diaphragm micro-tear on Filler M-03'}
             </p>
-            <div className="mt-3 pt-3 border-t border-[#D9E4FF] text-[13px] text-[#5F6875] flex items-center justify-between">
-              <span>Historical match: 3 similar incidents in past 180 days</span>
-              <span className="font-medium text-[#2F5BFF]">94% Confidence</span>
+
+            {/* Quick Evidence Bullets */}
+            <div className="mt-3 pt-3 border-t border-[#D9E4FF] grid grid-cols-2 gap-2 text-[12px]">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20]" />
+                <span className="text-[#5F6875]">Vibration:</span>
+                <strong className="text-[#18202A] font-mono">3.31 mm/s (+38%)</strong>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20]" />
+                <span className="text-[#5F6875]">Dosing Cycle:</span>
+                <strong className="text-[#18202A] font-mono">0.82s (+22%)</strong>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E56B00]" />
+                <span className="text-[#5F6875]">Manifold Pressure:</span>
+                <strong className="text-[#18202A] font-mono">2.45 bar (-21%)</strong>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E56B00]" />
+                <span className="text-[#5F6875]">Raw Milk Lot:</span>
+                <strong className="text-[#18202A] font-mono">#904 (+8.4% cP)</strong>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-2 text-[12px] text-[#2F5BFF] flex items-center justify-between">
+              <button
+                onClick={handleOpenFullWorkbench}
+                className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+              >
+                <span>+ View 2 secondary factors in Full Workbench</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          {/* 3. Real-Time Telemetry & Evidence Signals */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[15px] font-semibold text-[#18202A] flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#2F5BFF]" />
-                <span>Machine Sensor & Quality Telemetry</span>
-              </h3>
-              <span className="text-[12px] text-[#5F6875]">Live stream verification</span>
-            </div>
-
-            <div className="space-y-2.5">
-              <div className="p-3.5 rounded-xl border border-[#FECDCA] bg-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#FEF3F2] text-[#D92D20] flex items-center justify-center shrink-0">
-                    <Activity className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-[14px] font-medium text-[#18202A]">
-                      Filling Valve Vibration (M-03)
-                    </div>
-                    <div className="text-[12px] text-[#5F6875]">
-                      Expected: 1.8 - 2.4 mm/s · Threshold: 3.5 mm/s
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[16px] font-semibold text-[#D92D20]">4.82 mm/s</div>
-                  <div className="text-[12px] font-medium text-[#D92D20]">+128% spike</div>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-[#FEDF89] bg-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#FFF6ED] text-[#E56B00] flex items-center justify-center shrink-0">
-                    <Cpu className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-[14px] font-medium text-[#18202A]">
-                      Nozzle Block Temperature
-                    </div>
-                    <div className="text-[12px] text-[#5F6875]">
-                      Target: 72.0°C · Upper tolerance: 78.0°C
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[16px] font-semibold text-[#E56B00]">84.2°C</div>
-                  <div className="text-[12px] font-medium text-[#E56B00]">+12.2°C excess</div>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-[#E4E7EB] bg-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#F1F3F5] text-[#5F6875] flex items-center justify-center shrink-0">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-[14px] font-medium text-[#18202A]">
-                      Raw Milk Lot #LOT-RAW-904 Viscosity & Solids
-                    </div>
-                    <div className="text-[12px] text-[#5F6875]">
-                      Spec: 1.8 - 2.1 cP · Observed: 2.28 cP
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[16px] font-semibold text-[#18202A]">2.28 cP</div>
-                  <div className="text-[12px] text-[#8A93A0]">+8.4% deviation</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. Actionable Recommendations */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[15px] font-semibold text-[#18202A] flex items-center gap-2">
+          {/* D. Single Primary Action Recommendation (Zero Decision Paralysis) */}
+          <div className="p-4 rounded-xl border border-[#E4E7EB] bg-white shadow-xs">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-[#2F5BFF]" />
-                <span>Recommended Operational Actions</span>
-              </h3>
-              <span className="text-[12px] text-[#5F6875]">Verified mitigations</span>
+                <span className="text-[13px] font-bold text-[#18202A]">
+                  Recommended Maintenance SOP
+                </span>
+              </div>
+              <span className="text-[11px] font-semibold text-[#D92D20] bg-[#FEF3F2] px-2 py-0.5 rounded border border-[#FECDCA]">
+                Critical Priority
+              </span>
             </div>
 
-            <div className="space-y-3">
-              {investigation.recommendations.map((rec) => {
-                const isApproved = rec.status === 'Approved' || rec.status === 'Task Created';
-                const isTaskCreated = rec.status === 'Task Created';
+            <h4 className="text-[14px] font-semibold text-[#18202A]">
+              {primaryRec.title}
+            </h4>
+            <p className="text-[12px] text-[#5F6875] mt-1 leading-[18px]">
+              {primaryRec.reason}
+            </p>
 
-                return (
-                  <div
-                    key={rec.id}
-                    className={`p-4 rounded-xl border transition-all ${
-                      isTaskCreated
-                        ? 'border-[#A6F4C5] bg-[#F6FEF9]'
-                        : isApproved
-                        ? 'border-[#D9E4FF] bg-[#F8FAFF]'
-                        : 'border-[#E4E7EB] bg-white hover:border-[#D0D5DD]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-[12px] font-medium px-2 py-0.5 rounded ${
-                            rec.priority === 'Critical'
-                              ? 'bg-[#FEF3F2] text-[#D92D20]'
-                              : 'bg-[#FFF6ED] text-[#E56B00]'
-                          }`}
-                        >
-                          {rec.priority}
-                        </span>
-                        <span className="text-[13px] text-[#5F6875] font-medium">
-                          Team: {rec.owner}
-                        </span>
-                      </div>
-                      <span className="text-[12px] text-[#5F6875]">
-                        Effort: {rec.estimatedEffort}
-                      </span>
-                    </div>
+            <div className="mt-3 pt-3 border-t border-[#E4E7EB] flex items-center justify-between gap-3">
+              <div className="text-[12px] text-[#18864B] font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Target: Recover +1,000 bottles/hr</span>
+              </div>
 
-                    <div className="text-[15px] font-semibold text-[#18202A] mt-1">
-                      {rec.title}
-                    </div>
-                    <div className="text-[13px] text-[#5F6875] mt-1 leading-[20px]">
-                      {rec.reason}
-                    </div>
+              {!isResolved && !linkedTask && (
+                <button
+                  onClick={() => handleCreateTask(primaryRec)}
+                  className="h-8 px-3.5 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  <span>Dispatch Work Order</span>
+                </button>
+              )}
 
-                    <div className="mt-3 pt-3 border-t border-[#E4E7EB] flex items-center justify-between gap-3">
-                      <div className="text-[12px] text-[#18864B] font-medium flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Expected: {rec.expectedImpact}</span>
-                      </div>
+              {linkedTask && !isResolved && (
+                <span className="h-8 px-3 text-[12px] font-medium text-[#18864B] bg-[#EDFDF2] border border-[#A6F4C5] rounded-lg flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Dispatched to Carlos Ruiz</span>
+                </span>
+              )}
 
-                      <div className="flex items-center gap-2">
-                        {isTaskCreated ? (
-                          <span className="h-8 px-3 rounded-lg bg-[#EDFDF2] text-[#18864B] text-[13px] font-medium inline-flex items-center gap-1.5">
-                            <Check className="w-3.5 h-3.5" />
-                            Work Order Created
-                          </span>
-                        ) : isApproved ? (
-                          <button
-                            onClick={() => handleCreateTask(rec)}
-                            title="Generate and dispatch an official Work Order ticket to the maintenance team"
-                            className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                          >
-                            <ClipboardList className="w-3.5 h-3.5" />
-                            <span>Dispatch Work Order</span>
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleApprove(rec)}
-                              title="Sign off and validate this AI mitigation as official SOP"
-                              className="h-8 px-3 text-[13px] font-medium text-[#2F5BFF] bg-[#EEF3FF] hover:bg-[#D9E4FF] rounded-lg transition-colors cursor-pointer"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleCreateTask(rec)}
-                              title="Approve and immediately dispatch an official Work Order to the maintenance team"
-                              className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                            >
-                              <ClipboardList className="w-3.5 h-3.5" />
-                              <span>Assign Work Order</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {isResolved && (
+                <span className="h-8 px-3 text-[12px] font-medium text-[#18864B] bg-[#EDFDF2] border border-[#A6F4C5] rounded-lg flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Work Order Completed</span>
+                </span>
+              )}
             </div>
           </div>
+
         </div>
 
-        {/* Persistent Drawer Footer */}
-        <div className="p-4 px-6 border-t border-[#E4E7EB] bg-white flex items-center justify-between shrink-0">
+        {/* 4. Streamlined Persistent Drawer Footer */}
+        <div className="p-3.5 px-6 border-t border-[#E4E7EB] bg-white flex items-center justify-between shrink-0">
           <button
             onClick={closeInvestigationDrawer}
-            className="h-10 px-4 text-[14px] font-medium text-[#5F6875] hover:text-[#18202A] hover:bg-[#F1F3F5] rounded-lg transition-colors"
+            className="h-9 px-4 text-[13px] font-semibold text-[#5F6875] hover:text-[#18202A] hover:bg-[#F1F3F5] rounded-lg transition-colors cursor-pointer"
           >
             Close
           </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleOpenFullWorkbench}
-              className="h-10 px-4 text-[14px] font-medium text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors flex items-center gap-2"
-            >
-              <span>Full Screen Workbench</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => {
-                investigation.recommendations.forEach((rec) => {
-                  if (rec.status === 'Pending') {
-                    approveRecommendation(investigation.id, rec.id);
-                  }
-                });
-                showToast('All recommended mitigations approved successfully', 'success');
-              }}
-              className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-2 shadow-xs"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Approve All Fixes</span>
-            </button>
-          </div>
+          <button
+            onClick={handleOpenFullWorkbench}
+            className="h-9 px-4 text-[13px] font-semibold text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#D0D5DD] rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+          >
+            <span>Open Full Workbench</span>
+            <ExternalLink className="w-4 h-4 text-[#5F6875]" />
+          </button>
         </div>
+
       </div>
     </div>
   );

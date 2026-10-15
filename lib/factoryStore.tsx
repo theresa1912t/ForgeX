@@ -183,10 +183,10 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
   const [activeDrawerInvestigationId, setActiveDrawerInvestigationId] = useState<string | null>('inv-line3-hero');
 
   const openInvestigationDrawer = (id?: string) => {
-    if (id) {
-      setActiveDrawerInvestigationId(id);
-    }
-    setInvestigationDrawerOpen(true);
+    const targetId = id || 'inv-line3-hero';
+    setPreviousTab(activeTab);
+    setSelectedInvestigationId(targetId);
+    setActiveTab('investigations');
   };
 
   const closeInvestigationDrawer = () => {

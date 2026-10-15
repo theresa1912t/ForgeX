@@ -29,7 +29,7 @@ export function DashboardModule() {
     machines,
     alerts,
     setActiveTab,
-    openInvestigationDrawer,
+    setSelectedInvestigationId,
     setSelectedAlertId,
     setSelectedLineId,
     investigations,
@@ -123,18 +123,21 @@ export function DashboardModule() {
             <span>Loss Explorer</span>
           </button>
 
-          {/* CTA 2: AI Diagnosis */}
+          {/* CTA 2: AI Diagnosis / Root Cause */}
           <button
-            onClick={() => openInvestigationDrawer('inv-line3-hero')}
+            onClick={() => {
+              setSelectedInvestigationId('inv-line3-hero');
+              setActiveTab('investigations');
+            }}
             className="h-10 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-xl transition-all shadow-sm flex items-center gap-2 group cursor-pointer"
-            title="Open AI Root-Cause Investigation Slide-over Drawer for Line 3 Valve Anomaly"
+            title="Diagnose Line 3 Speed Loss & Valve Anomaly in Investigations Workbench"
           >
             <Sparkles className="w-4 h-4 text-white" />
-            <span>AI Diagnosis</span>
+            <span>Diagnose Line 3 Loss</span>
             {!isLine3Resolved && (
               <span className="w-2 h-2 rounded-full bg-[#FDA29B] animate-ping ml-0.5" />
             )}
-            <PanelRightOpen className="w-3.5 h-3.5 text-white/80 ml-0.5" />
+            <ArrowRight className="w-3.5 h-3.5 text-white/90 ml-0.5 group-hover:translate-x-0.5 transition-transform" />
           </button>
         </div>
       </div>
@@ -267,7 +270,8 @@ export function DashboardModule() {
           {/* Issue 1: Line 3 Hero */}
           <div
             onClick={() => {
-              openInvestigationDrawer('inv-line3-hero');
+              setSelectedInvestigationId('inv-line3-hero');
+              setActiveTab('investigations');
             }}
             className={`p-5 rounded-xl border bg-white cursor-pointer transition-all ${
               isLine3Resolved
@@ -285,21 +289,20 @@ export function DashboardModule() {
               >
                 {isLine3Resolved ? 'Resolved' : 'Critical Bottleneck'}
               </span>
-              <span className="text-[13px] text-[#5F6875]">Line 3 · Hot-Fill</span>
+              <span className="text-[13px] text-[#5F6875]">Line 3 · ESL/UHT Bottling</span>
             </div>
             <div className="text-[15px] leading-[22px] font-semibold text-[#18202A]">
               {isLine3Resolved
-                ? 'Line 3 recovered to 4,940 units/hr (Valve replaced)'
-                : 'Line 3 production is 14% below target'}
+                ? 'Line 3 recovered to 5,380 bottles/hr (Valve replaced)'
+                : 'Line 3 production is 18.9% below target'}
             </div>
             <div className="text-[13px] text-[#5F6875] mt-2">
               Financial impact:{' '}
-              <span className="font-semibold text-[#D92D20]">$4,650</span> ($1,400/hr)
+              <span className="font-semibold text-[#D92D20]">$3,366</span> ($1,683/hr burn)
             </div>
             <div className="mt-4 pt-3 border-t border-[#E4E7EB] flex items-center justify-between text-[13px] font-medium text-[#2F5BFF]">
-              <span className="flex items-center gap-1.5">
-                <PanelRightOpen className="w-3.5 h-3.5" />
-                <span>{isLine3Resolved ? 'Audit Resolution' : 'Open Investigation Drawer'}</span>
+              <span className="flex items-center gap-1.5 font-semibold">
+                <span>{isLine3Resolved ? 'View Resolution Case' : 'Diagnose Root Cause'}</span>
               </span>
               <ArrowRight className="w-4 h-4" />
             </div>
@@ -533,10 +536,14 @@ export function DashboardModule() {
                     <td className="py-4 px-4 text-right">
                       {isBottleneck ? (
                         <button
-                          onClick={() => openInvestigationDrawer('inv-line3-hero')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedInvestigationId('inv-line3-hero');
+                            setActiveTab('investigations');
+                          }}
                           className="h-8 px-3 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
                         >
-                          <PanelRightOpen className="w-3.5 h-3.5" />
+                          <Sparkles className="w-3.5 h-3.5" />
                           <span>Investigate</span>
                         </button>
                       ) : (
@@ -637,11 +644,12 @@ export function DashboardModule() {
                     {alert.investigationId ? (
                       <button
                         onClick={() => {
-                          openInvestigationDrawer(alert.investigationId!);
+                          setSelectedInvestigationId(alert.investigationId!);
+                          setActiveTab('investigations');
                         }}
                         className="h-8 px-3 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
                       >
-                        <PanelRightOpen className="w-3.5 h-3.5" />
+                        <Sparkles className="w-3.5 h-3.5" />
                         <span>Investigate</span>
                       </button>
                     ) : (
