@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useSyncExternalStore } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FactoryProvider, useFactory } from '@/lib/factoryStore';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
@@ -33,19 +34,30 @@ function AppContent() {
     () => false
   );
 
-  const { activeTab, notifications, toast, clearToast } = useFactory();
+  const { activeTab, notifications, toast, clearToast, isLoading, loadError } = useFactory();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isIngestionOpen, setIsIngestionOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  if (!isClient) {
+  if (!isClient || isLoading) {
     return (
       <div className="flex min-h-screen bg-[#F7F8FA] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-[#2F5BFF] border-t-transparent rounded-full animate-spin" />
           <p className="text-[13px] font-medium text-[#5F6875]">Initializing FactoryLens Operations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-screen bg-[#F7F8FA] items-center justify-center">
+        <div className="flex flex-col items-center gap-3 max-w-md text-center">
+          <p className="text-[14px] font-semibold text-[#18202A]">Couldn&apos;t load factory data</p>
+          <p className="text-[13px] font-medium text-[#5F6875]">{loadError.message}</p>
         </div>
       </div>
     );
@@ -141,9 +153,20 @@ function AppContent() {
 }
 
 export default function Page() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: Infinity, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+
   return (
-    <FactoryProvider>
-      <AppContent />
-    </FactoryProvider>
+    <QueryClientProvider client={queryClient}>
+      <FactoryProvider>
+        <AppContent />
+      </FactoryProvider>
+    </QueryClientProvider>
   );
 }
