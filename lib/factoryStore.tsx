@@ -174,6 +174,13 @@ interface FactoryContextType {
 
   // Demo Reset
   resetDemoToHeroState: () => void;
+
+  // Alerting (Phase 5: on-demand threshold check — see lib/usecases/alerts/evaluateVibrationThresholds.ts)
+  evaluateThresholds: () => void;
+
+  // Investigation engine (Phase 6 — see lib/usecases/investigations/generateInvestigation.ts).
+  // Returns the created investigation (or undefined on failure) so the caller can navigate into it.
+  generateInvestigation: (alertId: string) => Promise<Investigation | undefined>;
 }
 
 const FactoryContext = createContext<FactoryContextType | undefined>(undefined);
@@ -455,6 +462,8 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         addNotification: mutations.addNotification,
         ingestData: mutations.ingestData,
         resetDemoToHeroState,
+        evaluateThresholds: mutations.evaluateThresholds,
+        generateInvestigation: mutations.generateInvestigation,
       }}
     >
       {children}

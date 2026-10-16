@@ -6,6 +6,10 @@ export async function findAll(client: DbClient = prisma) {
   return client.productionLine.findMany();
 }
 
+export async function findById(id: string, client: DbClient = prisma) {
+  return client.productionLine.findUnique({ where: { id } });
+}
+
 export async function update(
   id: string,
   data: Prisma.ProductionLineUpdateInput,

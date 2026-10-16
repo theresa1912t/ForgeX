@@ -12,7 +12,9 @@
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "simulate:telemetry": "tsx scripts/mqttSimulator.ts",
+    "ingest:telemetry": "tsx scripts/mqttIngestor.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -26,6 +28,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
+    "mqtt": "^5.16.1",
     "next": "^15.4.9",
     "next-auth": "^5.0.0-beta.32",
     "pg": "^8.23.1",
@@ -41,6 +44,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^18.0.8",
     "eslint": "9.39.1",
     "eslint-config-next": "16.0.8",
     "firebase-tools": "^15.0.0",

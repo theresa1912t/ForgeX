@@ -22,6 +22,7 @@ import type {
   OperationalThresholds,
   DeviceConnection,
   MachineConnectivityProfile,
+  SensorReading,
 } from '@/lib/types';
 
 export const QUERY_KEYS = {
@@ -192,5 +193,16 @@ export function useMachineProfilesQuery() {
     queryKey: QUERY_KEYS.machineProfiles,
     queryFn: () => apiGet<MachineConnectivityProfile[]>('/machine-profiles'),
     select: (rows) => Object.fromEntries(rows.map((row) => [row.machineId, row])),
+  });
+}
+
+// Deliberate exception to this file's pattern: not part of FactoryProvider's fetch-everything-
+// on-mount model (see lib/factoryStore.tsx). This is genuinely time-varying live telemetry, only
+// needed while viewing one machine's detail panel, so MachinesModule.tsx calls it directly.
+export function useMachineReadingsQuery(machineId: string) {
+  return useQuery({
+    queryKey: ['machineReadings', machineId],
+    queryFn: () => apiGet<SensorReading[]>(`/machines/${machineId}/readings`),
+    refetchInterval: 3000,
   });
 }

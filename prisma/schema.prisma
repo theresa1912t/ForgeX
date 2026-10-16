@@ -304,6 +304,7 @@ model Machine {
   downtimeRecords    DowntimeRecord[]
   ingredientUsages   IngredientUsageRecord[]
   connectivityProfile MachineConnectivityProfile?
+  sensorReadings     SensorReading[]
 
   @@index([lineId])
 }
@@ -714,4 +715,22 @@ model SensorTagMapping {
   profile MachineConnectivityProfile @relation(fields: [machineId], references: [machineId])
 
   @@index([machineId])
+}
+
+// --- Live telemetry (Phase 4) --------------------------------------------------
+// Raw readings ingested from the MQTT simulator/ingestor (scripts/mqttIngestor.ts). Deliberately
+// separate from Machine's status columns (temperatureC, vibrationMmS, etc.) — those are driven
+// by seed data and the hero investigation's scripted cascade, and must not be overwritten by a
+// live reading. This table is purely additive, feeding the Machines module's live feed view.
+model SensorReading {
+  id         String   @id @default(cuid())
+  machineId  String
+  metricKey  String
+  value      Float
+  unit       String
+  recordedAt DateTime @default(now())
+
+  machine Machine @relation(fields: [machineId], references: [id])
+
+  @@index([machineId, metricKey, recordedAt])
 }

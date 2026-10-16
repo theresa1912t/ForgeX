@@ -13,6 +13,11 @@ export async function findAll(client: DbClient = prisma) {
   return rows.map(serialize);
 }
 
+export async function findById(id: string, client: DbClient = prisma) {
+  const row = await client.machine.findUnique({ where: { id } });
+  return row ? serialize(row) : null;
+}
+
 export async function update(id: string, data: Partial<Machine>, client: DbClient = prisma) {
   const row = await client.machine.update({
     where: { id },

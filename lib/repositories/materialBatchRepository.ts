@@ -14,6 +14,13 @@ export async function findAll(client: DbClient = prisma) {
   return rows.map(serialize);
 }
 
+export async function findByRelatedAlert(alertId: string, client: DbClient = prisma) {
+  const rows = await client.materialBatch.findMany({
+    where: { relatedAlertIds: { has: alertId } },
+  });
+  return rows.map(serialize);
+}
+
 export async function create(data: Omit<MaterialBatch, 'id'>, client: DbClient = prisma) {
   const row = await client.materialBatch.create({
     data: {

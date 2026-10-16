@@ -25,6 +25,11 @@ export async function findAll(client: DbClient = prisma) {
   return rows.map(serialize);
 }
 
+export async function findByMachine(machineId: string, client: DbClient = prisma) {
+  const rows = await client.wasteRecord.findMany({ where: { machineId } });
+  return rows.map(serialize);
+}
+
 export async function create(
   data: Omit<WasteRecord, 'id' | 'timestamp'>,
   client: DbClient = prisma,

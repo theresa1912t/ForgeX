@@ -4,6 +4,7 @@ import { QUERY_KEYS } from '@/lib/queries';
 import type {
   ActionTask,
   DeviceConnection,
+  Investigation,
   MaterialBatch,
   NotificationItem,
   OperationalThresholds,
@@ -271,6 +272,35 @@ export function useFactoryMutations(showToast: ShowToast) {
     }
   }
 
+  // Unlike every other mutator here (fire-and-forget), the caller needs the new investigation's
+  // id to navigate straight into it — returns the created investigation on success, undefined on
+  // failure (the toast is still shown via reportError, same as everywhere else).
+  async function generateInvestigation(alertId: string): Promise<Investigation | undefined> {
+    try {
+      const investigation = await apiPost<Investigation>(`/alerts/${alertId}/investigate`);
+      invalidate(QUERY_KEYS.alerts, QUERY_KEYS.investigations, QUERY_KEYS.notifications);
+      showToast(`Investigation generated: ${investigation.title}`, 'success');
+      return investigation;
+    } catch (error) {
+      reportError(error, 'Failed to generate investigation');
+      return undefined;
+    }
+  }
+
+  async function evaluateThresholds() {
+    try {
+      const result = await apiPost<{ createdFor: string[] }>('/alerts/evaluate-thresholds');
+      invalidate(QUERY_KEYS.alerts, QUERY_KEYS.notifications);
+      if (result.createdFor.length === 0) {
+        showToast('No anomalies detected — all live readings within threshold', 'info');
+      } else {
+        showToast(`New alert raised for: ${result.createdFor.join(', ')}`, 'warning');
+      }
+    } catch (error) {
+      reportError(error, 'Failed to run threshold check');
+    }
+  }
+
   return {
     testConnection,
     addDeviceConnection,
@@ -289,5 +319,7 @@ export function useFactoryMutations(showToast: ShowToast) {
     addNotification,
     ingestData,
     resetDemoToHeroState,
+    evaluateThresholds,
+    generateInvestigation,
   };
 }
