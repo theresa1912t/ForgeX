@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { withErrorHandling } from '@/lib/server/http';
+import { withAuth, withErrorHandling } from '@/lib/server/http';
 import { listQualityRecords } from '@/lib/usecases/qualityRecords/listQualityRecords';
 
-export const GET = withErrorHandling(async () => {
+export const GET = withAuth(withErrorHandling(async () => {
   return NextResponse.json(await listQualityRecords());
-});
+}));

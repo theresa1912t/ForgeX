@@ -238,6 +238,7 @@ model User {
   id             String   @id
   name           String
   email          String   @unique
+  passwordHash   String
   role           UserRole
   title          String
   avatar         String?

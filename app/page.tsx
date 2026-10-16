@@ -2,6 +2,7 @@
 
 import React, { useState, useSyncExternalStore } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SessionProvider } from 'next-auth/react';
 import { FactoryProvider, useFactory } from '@/lib/factoryStore';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
@@ -163,10 +164,12 @@ export default function Page() {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <FactoryProvider>
-        <AppContent />
-      </FactoryProvider>
-    </QueryClientProvider>
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <FactoryProvider>
+          <AppContent />
+        </FactoryProvider>
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }

@@ -25,8 +25,6 @@ export function SettingsModule() {
     thresholds,
     updateThresholds,
     users,
-    setCurrentRole,
-    currentRole,
     addNotification,
     deviceConnections,
     testConnection,

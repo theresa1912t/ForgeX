@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Organization,
   Factory,
@@ -75,12 +76,10 @@ interface FactoryContextType {
   isLoading: boolean;
   loadError: Error | null;
 
-  // User & Role
+  // User & Role (from the authenticated session — see auth.ts)
   users: User[];
-  currentUser: User;
-  setCurrentUserId: (id: string) => void;
+  currentUser: User | undefined;
   currentRole: UserRole;
-  setCurrentRole: (role: UserRole) => void;
 
   // Active module view
   activeTab: string;
@@ -225,7 +224,8 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
     deviceConnectionsQuery,
     machineProfilesQuery,
   ];
-  const isLoading = allQueries.some((q) => q.isLoading);
+  const session = useSession();
+  const isLoading = allQueries.some((q) => q.isLoading) || session.status === 'loading';
   const loadError = allQueries.find((q) => q.isError)?.error as Error | undefined;
 
   const organization = organizationQuery.data ?? EMPTY_ORGANIZATION;
@@ -251,10 +251,6 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
   const machineProfiles = machineProfilesQuery.data ?? EMPTY_RECORD;
 
   const [selectedFactoryId, setSelectedFactoryId] = useState<string>('fac-main');
-  const [currentUserId, setCurrentUserId] = useState<string>('usr-1'); // Marcus Vance (Manager)
-  // Role switching is cosmetic (no auth/RBAC enforcement yet — see PLANNING.md phase 3), so it's
-  // a local override rather than a write to the fetched user list.
-  const [roleOverride, setRoleOverride] = useState<UserRole | null>(null);
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [previousTab, setPreviousTab] = useState<string>('dashboard');
@@ -361,17 +357,15 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
     setActiveTab('investigations');
   };
 
-  // Computed User & Role
-  const currentUser = useMemo(() => {
-    const user = users.find((u) => u.id === currentUserId) || users[0];
-    return roleOverride && user ? { ...user, role: roleOverride } : user;
-  }, [users, currentUserId, roleOverride]);
+  // Computed User & Role — comes straight from the authenticated session, matched against the
+  // fetched user list for the full profile (title, avatar, organizationId aren't in the JWT).
+  const sessionUserId = session.data?.user?.id;
+  const currentUser = useMemo(
+    () => users.find((u) => u.id === sessionUserId),
+    [users, sessionUserId],
+  );
 
   const currentRole = currentUser?.role ?? 'Viewer';
-
-  const setCurrentRole = (role: UserRole) => {
-    setRoleOverride(role);
-  };
 
   const selectedFactory = useMemo(() => {
     return factories.find((f) => f.id === selectedFactoryId) || factories[0];
@@ -397,9 +391,7 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         loadError: loadError ?? null,
         users,
         currentUser,
-        setCurrentUserId,
         currentRole,
-        setCurrentRole,
         activeTab,
         setActiveTab,
         previousTab,

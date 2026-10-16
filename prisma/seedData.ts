@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import {
   initialOrganization,
   initialFactories,
@@ -44,8 +45,13 @@ export function buildFactoryRows() {
   return initialFactories;
 }
 
+// Single shared demo password for every seeded persona — there's no signup flow in this
+// single-tenant demo, so one documented password covering all seeded emails is simplest.
+export const DEMO_PASSWORD = 'ForgeX-Demo-2026!';
+
 export function buildUserRows() {
-  return initialUsers;
+  const passwordHash = bcrypt.hashSync(DEMO_PASSWORD, 10);
+  return initialUsers.map((u) => ({ ...u, passwordHash }));
 }
 
 export function buildProductRows() {

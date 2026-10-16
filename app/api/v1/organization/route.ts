@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { withErrorHandling } from '@/lib/server/http';
+import { withAuth, withErrorHandling } from '@/lib/server/http';
 import { getOrganization } from '@/lib/usecases/organization/getOrganization';
 
-export const GET = withErrorHandling(async () => {
+export const GET = withAuth(withErrorHandling(async () => {
   const organization = await getOrganization();
   return NextResponse.json(organization);
-});
+}));
