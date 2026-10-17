@@ -6,6 +6,10 @@ export default {
   pages: {
     signIn: '/login',
   },
+  // Lets NextAuth accept requests whose Host header isn't localhost/the configured AUTH_URL —
+  // needed to run behind a tunnel (ngrok, Cloudflare Tunnel) for a demo; otherwise login fails
+  // with an UntrustedHost error on the tunnel's domain.
+  trustHost: true,
   providers: [],
   callbacks: {
     authorized({ auth, request }) {

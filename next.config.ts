@@ -2,6 +2,9 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Lets the dev server accept requests proxied through an ngrok tunnel for demos — without
+  // this, Next.js's dev cross-origin check rejects requests whose Host doesn't match localhost.
+  allowedDevOrigins: ['*.ngrok-free.app', '*.ngrok.app', '*.ngrok.io'],
   eslint: {
     ignoreDuringBuilds: true,
   },

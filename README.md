@@ -27,9 +27,12 @@ for local development. Notes on the other variables:
 - `AUTH_SECRET` — signs session JWTs. Generate one with `openssl rand -base64 32`. In dev,
   NextAuth will auto-generate an ephemeral one if left unset, but set a real value for anything
   beyond a quick local run.
-- `GEMINI_API_KEY` — optional. Used to polish investigation summaries into readable prose; if
-  unset, the app falls back to a templated (still real, non-fabricated) summary. Nothing else
-  depends on it.
+- `GEMINI_API_KEY` — optional. Powers the AI Assistant chat (`/api/v1/gemini/assistant`) and
+  polishes investigation summaries into readable prose. If unset (or every model call fails),
+  both fall back to a response built from real data instead of AI output — never a fabricated one.
+- `GEMINI_MODELS` — optional, comma-separated model names tried in order (first = primary, rest
+  are fallbacks used only if an earlier one actually errors — rate limit, outage, retired model).
+  Defaults to `gemini-3.8-flash` alone if unset. See `lib/server/gemini.ts`.
 - `APP_URL` — only relevant when deployed; safe to leave as-is for local dev.
 
 ## 3. Start Postgres and the MQTT broker
