@@ -43,6 +43,7 @@ export function InvestigationDrawer() {
     completeTaskWithOutcome,
     actionTasks,
     setActiveTab,
+    setSelectedInvestigationId,
     showToast,
     isMutationPending,
   } = useFactory();
@@ -56,9 +57,12 @@ export function InvestigationDrawer() {
 
   const isHero = investigation.id === HERO_INVESTIGATION_ID;
   const isResolved = investigation.status === 'Resolved';
-  const linkedTask = actionTasks.find(
-    (t) => t.investigationId === investigation.id || t.alertId === investigation.alertId
-  );
+  // Prefer a task actually tied to THIS investigation; only fall back to matching by alertId for
+  // legacy tasks with no investigationId set — otherwise a different, unrelated task sharing the
+  // same alert (e.g. an old seeded one) could be picked instead.
+  const linkedTask =
+    actionTasks.find((t) => t.investigationId === investigation.id) ||
+    actionTasks.find((t) => !t.investigationId && t.alertId === investigation.alertId);
 
   // Every real investigation always has >=1 recommendation (generateInvestigation.ts throws
   // before creating one with none) — this fallback is a defensive no-data placeholder, so it
@@ -194,6 +198,7 @@ export function InvestigationDrawer() {
                 <button
                   onClick={() => {
                     closeInvestigationDrawer();
+                    setSelectedInvestigationId(investigation.id);
                     setActiveTab('actions');
                   }}
                   className="h-8 px-3 text-[12px] font-semibold text-[#2F5BFF] hover:bg-[#EEF3FF] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"

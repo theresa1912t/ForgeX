@@ -95,9 +95,12 @@ export function InvestigationsModule() {
   const isResolved = currentInv.status === 'Resolved';
   const isHero = currentInv.id === HERO_INVESTIGATION_ID;
   const { businessImpact } = currentInv;
-  const linkedTask = actionTasks.find(
-    (t) => t.investigationId === currentInv.id || t.alertId === currentInv.alertId
-  );
+  // Prefer a task actually tied to THIS investigation; only fall back to matching by alertId for
+  // legacy tasks with no investigationId set — otherwise a different, unrelated task sharing the
+  // same alert (e.g. an old seeded one) could be picked instead.
+  const linkedTask =
+    actionTasks.find((t) => t.investigationId === currentInv.id) ||
+    actionTasks.find((t) => !t.investigationId && t.alertId === currentInv.alertId);
 
   const primaryRec = currentInv.recommendations?.[0];
 
@@ -223,7 +226,10 @@ export function InvestigationsModule() {
                   <span>Audit Scrap Ledger</span>
                 </button>
                 <button
-                  onClick={() => setActiveTab('actions')}
+                  onClick={() => {
+                    setSelectedInvestigationId(currentInv.id);
+                    setActiveTab('actions');
+                  }}
                   className="h-10 px-4 text-[13px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -262,7 +268,10 @@ export function InvestigationsModule() {
                   </span>
                 </button>
                 <button
-                  onClick={() => setActiveTab('actions')}
+                  onClick={() => {
+                    setSelectedInvestigationId(currentInv.id);
+                    setActiveTab('actions');
+                  }}
                   className="h-10 px-3.5 text-[13px] font-semibold text-[#18202A] bg-white border border-[#D0D5DD] hover:bg-[#F7F8FA] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>View Work Order</span>
