@@ -119,7 +119,7 @@ Ask me any operational question about production loss, machine health, root caus
       const fallbackMsg: ChatMessage = {
         id: getNextId('fallback'),
         sender: 'assistant',
-        text: `DIRECT ANSWER:\nLine 3 is currently 14% below target due to valve diaphragm seal resistance on Filling Machine M-03 ($4,650 loss today).\n\nRECOMMENDED ACTION:\nInspect valve heads #4 & #8 on M-03 and replace seal kit during shift break.`,
+        text: 'Could not reach the AI service right now. Please check your connection and try again, or review the Alerts and Investigations modules directly.',
         timestamp: 'Just now',
       };
       setMessages((prev) => [...prev, fallbackMsg]);

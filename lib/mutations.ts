@@ -4,6 +4,9 @@ import { apiPatch, apiPost } from '@/lib/apiClient';
 import { QUERY_KEYS } from '@/lib/queries';
 import type {
   ActionTask,
+  Alert,
+  AlertCategory,
+  AlertSeverity,
   DeviceConnection,
   Investigation,
   MaterialBatch,
@@ -365,6 +368,52 @@ export function useFactoryMutations(showToast: ShowToast) {
     });
   }
 
+  // Manual incident registration (need-checking.md Journey A).
+  async function reportIssue(input: {
+    machineId: string;
+    category: AlertCategory;
+    severity: AlertSeverity;
+    title: string;
+    description: string;
+  }): Promise<Alert | undefined> {
+    return withPending('reportIssue', async () => {
+      try {
+        const alert = await apiPost<Alert>('/alerts', input);
+        invalidate(QUERY_KEYS.alerts, QUERY_KEYS.notifications);
+        showToast(`Issue reported: "${alert.title}"`, 'success');
+        return alert;
+      } catch (error) {
+        reportError(error, 'Failed to report issue');
+        return undefined;
+      }
+    });
+  }
+
+  async function reopenAlert(alertId: string, reason: string) {
+    await withPending(`reopenAlert:${alertId}`, async () => {
+      try {
+        const alert = await apiPost<Alert>(`/alerts/${alertId}/reopen`, { reason });
+        invalidate(QUERY_KEYS.alerts, QUERY_KEYS.investigations, QUERY_KEYS.notifications);
+        showToast(`Reopened: "${alert.title}"`, 'warning');
+      } catch (error) {
+        reportError(error, 'Failed to reopen alert');
+      }
+    });
+  }
+
+  // Demo simulation scenarios (need-checking.md §9) — user-triggered, not a background loop.
+  async function simulateFailure(machineId: string, scenario: string) {
+    await withPending('simulateFailure', async () => {
+      try {
+        const alert = await apiPost<Alert>('/alerts/simulate', { machineId, scenario });
+        invalidate(QUERY_KEYS.alerts, QUERY_KEYS.notifications);
+        showToast(`Simulated scenario created: "${alert.title}"`, 'warning');
+      } catch (error) {
+        reportError(error, 'Failed to run simulation scenario');
+      }
+    });
+  }
+
   return {
     isPending,
     testConnection,
@@ -386,5 +435,8 @@ export function useFactoryMutations(showToast: ShowToast) {
     resetDemoToHeroState,
     evaluateThresholds,
     generateInvestigation,
+    reportIssue,
+    reopenAlert,
+    simulateFailure,
   };
 }

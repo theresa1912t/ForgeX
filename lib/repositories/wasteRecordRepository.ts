@@ -12,13 +12,60 @@ import { safeDb } from './safeDb';
 import type { WasteRecord } from '@/lib/types';
 import type { DbClient } from './types';
 
-function serialize<T extends { defectCategory: $Enums.WasteDefectCategory | null; wasteReason: $Enums.WasteReason }>(
+function serialize<
+  T extends {
+    materialId: string | null;
+    machineId: string | null;
+    machineName: string | null;
+    defectCategory: $Enums.WasteDefectCategory | null;
+    wasteReason: $Enums.WasteReason;
+    relatedAnomaly: string | null;
+    relatedInvestigationId: string | null;
+    recoveryActionTaken: string | null;
+  },
+>(
   row: T,
-) {
+): Omit<
+  T,
+  | 'materialId'
+  | 'machineId'
+  | 'machineName'
+  | 'defectCategory'
+  | 'wasteReason'
+  | 'relatedAnomaly'
+  | 'relatedInvestigationId'
+  | 'recoveryActionTaken'
+> & {
+  materialId?: WasteRecord['materialId'];
+  machineId?: WasteRecord['machineId'];
+  machineName?: WasteRecord['machineName'];
+  defectCategory?: WasteRecord['defectCategory'];
+  wasteReason: WasteRecord['wasteReason'];
+  relatedAnomaly?: WasteRecord['relatedAnomaly'];
+  relatedInvestigationId?: WasteRecord['relatedInvestigationId'];
+  recoveryActionTaken?: WasteRecord['recoveryActionTaken'];
+} {
+  const {
+    materialId,
+    machineId,
+    machineName,
+    defectCategory,
+    wasteReason,
+    relatedAnomaly,
+    relatedInvestigationId,
+    recoveryActionTaken,
+    ...rest
+  } = row;
   return {
-    ...row,
-    defectCategory: row.defectCategory ? wasteDefectCategoryReverseMap[row.defectCategory] : null,
-    wasteReason: wasteReasonReverseMap[row.wasteReason],
+    ...rest,
+    materialId: materialId ?? undefined,
+    machineId: machineId ?? undefined,
+    machineName: machineName ?? undefined,
+    defectCategory: defectCategory ? wasteDefectCategoryReverseMap[defectCategory] : undefined,
+    wasteReason: wasteReasonReverseMap[wasteReason],
+    relatedAnomaly: relatedAnomaly ?? undefined,
+    relatedInvestigationId: relatedInvestigationId ?? undefined,
+    recoveryActionTaken: recoveryActionTaken ?? undefined,
   };
 }
 
@@ -47,6 +94,7 @@ export async function create(
   client: DbClient = prisma,
 ) {
   const wasteId = `w-user-${randomUUID()}`;
+  const timestamp = new Date().toISOString();
   return safeDb(
     async () => {
       const row = await client.wasteRecord.create({
@@ -54,25 +102,24 @@ export async function create(
           id: wasteId,
           materialId: data.materialId ?? null,
           materialName: data.materialName,
-          batchCode: data.batchCode ?? null,
-          lineId: data.lineId,
+          productionBatchCode: data.productionBatchCode,
           lineName: data.lineName,
           machineId: data.machineId ?? null,
           machineName: data.machineName ?? null,
-          productId: data.productId ?? null,
-          productName: data.productName ?? null,
-          quantityKg: data.quantityKg,
-          costImpactUsd: data.costImpactUsd,
-          wasteReason: wasteReasonMap[data.wasteReason],
+          wasteQuantityKg: data.wasteQuantityKg,
+          wasteType: data.wasteType,
           defectCategory: data.defectCategory ? wasteDefectCategoryMap[data.defectCategory] : null,
-          timestamp: 'Just now',
-          shift: data.shift,
-          notes: data.notes,
+          wasteReason: wasteReasonMap[data.wasteReason],
+          wasteCost: data.wasteCost,
+          relatedAnomaly: data.relatedAnomaly ?? null,
+          relatedInvestigationId: data.relatedInvestigationId ?? null,
+          recoveryActionTaken: data.recoveryActionTaken ?? null,
+          timestamp,
         },
       });
       return serialize(row);
     },
-    () => ({ id: wasteId, ...data, timestamp: 'Just now' })
+    () => ({ id: wasteId, ...data, timestamp })
   );
 }
 

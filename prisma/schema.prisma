@@ -65,6 +65,7 @@ enum AlertStatus {
   InProgress
   Resolved
   Dismissed
+  Reopened
 }
 
 enum EvidenceSignalType {
@@ -84,6 +85,12 @@ enum InvestigationStatus {
   Active
   Investigating
   Resolved
+  Reopened
+}
+
+enum ProductionMetricSource {
+  Seed
+  Simulator
 }
 
 enum Priority {
@@ -305,6 +312,7 @@ model Machine {
   ingredientUsages   IngredientUsageRecord[]
   connectivityProfile MachineConnectivityProfile?
   sensorReadings     SensorReading[]
+  productionMetrics  ProductionMetric[]
 
   @@index([lineId])
 }
@@ -389,10 +397,52 @@ model Alert {
   machine       Machine?       @relation(fields: [machineId], references: [id])
   product       Product?       @relation(fields: [productId], references: [id])
   investigation Investigation?
+  events        IncidentEvent[]
 
   @@index([factoryId])
   @@index([lineId])
   @@index([machineId])
+  @@index([status])
+  @@index([severity])
+}
+
+// Append-only audit trail for an Alert's full incident lifecycle (manual report through
+// investigation, approval, dispatch, completion/resolution, and reopen) — rows are only ever
+// inserted, never updated, unlike Investigation.timeline which is a plain JSON column with no
+// such guarantee.
+model IncidentEvent {
+  id         String   @id @default(cuid())
+  alertId    String
+  eventType  String
+  actorName  String?
+  fromStatus String?
+  toStatus   String?
+  message    String
+  createdAt  DateTime @default(now())
+
+  alert Alert @relation(fields: [alertId], references: [id])
+
+  @@index([alertId])
+}
+
+// Time-bucketed historical production figures per machine — distinct from Machine/ProductionLine's
+// live current-snapshot fields, which only ever hold "right now," not a queryable history.
+model ProductionMetric {
+  id             String                 @id @default(cuid())
+  machineId      String
+  intervalStart  DateTime
+  intervalEnd    DateTime
+  expectedUnits  Float
+  actualUnits    Float
+  goodUnits      Float
+  defectiveUnits Float
+  unitRevenue    Float
+  source         ProductionMetricSource @default(Seed)
+  createdAt      DateTime               @default(now())
+
+  machine Machine @relation(fields: [machineId], references: [id])
+
+  @@index([machineId, intervalStart])
 }
 
 model Investigation {
@@ -539,6 +589,9 @@ model NotificationItem {
   read       Boolean
   linkModule String?
   linkId     String?
+  // `timestamp` is a display string ("10:42 AM", "Yesterday at...") and isn't reliably sortable —
+  // this is the real value the list is ordered by (newest first).
+  createdAt  DateTime      @default(now())
 }
 
 model OperationalThresholds {

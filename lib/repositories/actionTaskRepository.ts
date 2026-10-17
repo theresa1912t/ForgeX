@@ -7,8 +7,41 @@ import { safeDb } from './safeDb';
 import type { ActionTask } from '@/lib/types';
 import type { DbClient } from './types';
 
-function serialize<T extends { status: $Enums.ActionTaskStatus }>(row: T) {
-  return { ...row, status: actionTaskStatusReverseMap[row.status] };
+// Explicit return type: the inferred one doesn't reflect the enum->display-string remap this
+// actually does at runtime (a pre-existing repository-layer typing gap), which otherwise makes
+// TypeScript reject passing an app-level-typed fallback (e.g. mock data) alongside this result.
+function serialize<
+  T extends {
+    status: $Enums.ActionTaskStatus;
+    investigationId: string | null;
+    recommendationId: string | null;
+    actualResult: string | null;
+    resolutionNotes: string | null;
+    completedAt: string | null;
+  },
+>(
+  row: T,
+): Omit<
+  T,
+  'status' | 'investigationId' | 'recommendationId' | 'actualResult' | 'resolutionNotes' | 'completedAt'
+> & {
+  status: ActionTask['status'];
+  investigationId?: ActionTask['investigationId'];
+  recommendationId?: ActionTask['recommendationId'];
+  actualResult?: ActionTask['actualResult'];
+  resolutionNotes?: ActionTask['resolutionNotes'];
+  completedAt?: ActionTask['completedAt'];
+} {
+  const { status, investigationId, recommendationId, actualResult, resolutionNotes, completedAt, ...rest } = row;
+  return {
+    ...rest,
+    status: actionTaskStatusReverseMap[status],
+    investigationId: investigationId ?? undefined,
+    recommendationId: recommendationId ?? undefined,
+    actualResult: actualResult ?? undefined,
+    resolutionNotes: resolutionNotes ?? undefined,
+    completedAt: completedAt ?? undefined,
+  };
 }
 
 export async function findAll(client: DbClient = prisma) {
@@ -29,6 +62,16 @@ export async function findById(id: string, client: DbClient = prisma) {
     },
     () => initialActionTasks.find((t) => t.id === id) || initialActionTasks[0]
   );
+}
+
+export async function findByAlert(alertId: string, client: DbClient = prisma) {
+  const rows = await client.actionTask.findMany({ where: { alertId }, orderBy: { id: 'asc' } });
+  return rows.map(serialize);
+}
+
+export async function findByInvestigation(investigationId: string, client: DbClient = prisma) {
+  const rows = await client.actionTask.findMany({ where: { investigationId }, orderBy: { id: 'asc' } });
+  return rows.map(serialize);
 }
 
 export async function findByInvestigationAndRecommendation(
@@ -121,7 +164,7 @@ export async function complete(
     },
     () => {
       const existing = initialActionTasks.find((t) => t.id === id) || initialActionTasks[0];
-      return { ...existing, status: 'Completed', ...data, completedAt: 'Just now' };
+      return { ...existing, status: 'Completed' as const, ...data, completedAt: 'Just now' };
     }
   );
 }

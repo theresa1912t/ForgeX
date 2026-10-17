@@ -7,8 +7,26 @@ import { safeDb } from './safeDb';
 import type { MaterialBatch } from '@/lib/types';
 import type { DbClient } from './types';
 
-function serialize<T extends { status: $Enums.MaterialBatchStatus }>(row: T) {
-  return { ...row, status: batchStatusReverseMap[row.status] };
+function serialize<
+  T extends {
+    status: $Enums.MaterialBatchStatus;
+    viscosityDeviationPct: number | null;
+    defectRateImpact: string | null;
+  },
+>(
+  row: T,
+): Omit<T, 'status' | 'viscosityDeviationPct' | 'defectRateImpact'> & {
+  status: MaterialBatch['status'];
+  viscosityDeviationPct?: MaterialBatch['viscosityDeviationPct'];
+  defectRateImpact?: MaterialBatch['defectRateImpact'];
+} {
+  const { status, viscosityDeviationPct, defectRateImpact, ...rest } = row;
+  return {
+    ...rest,
+    status: batchStatusReverseMap[status],
+    viscosityDeviationPct: viscosityDeviationPct ?? undefined,
+    defectRateImpact: defectRateImpact ?? undefined,
+  };
 }
 
 export async function findAll(client: DbClient = prisma) {
@@ -43,20 +61,16 @@ export async function create(data: Omit<MaterialBatch, 'id'>, client: DbClient =
           id: batchId,
           materialId: data.materialId,
           batchCode: data.batchCode,
-          supplierName: data.supplierName,
-          supplierBatchNo: data.supplierBatchNo,
+          supplier: data.supplier,
           receivedDate: data.receivedDate,
           expiryDate: data.expiryDate,
-          initialQuantityKg: data.initialQuantityKg,
-          currentQuantityKg: data.currentQuantityKg,
-          qualityStatus: data.qualityStatus,
+          quantity: data.quantity,
+          unitOfMeasure: data.unitOfMeasure,
           status: batchStatusMap[data.status],
-          labTests: data.labTests as any,
-          coaUrl: data.coaUrl,
-          assignedLineId: data.assignedLineId,
-          assignedMachineId: data.assignedMachineId,
-          notes: data.notes,
-          relatedAlertIds: data.relatedAlertIds,
+          viscosityDeviationPct: data.viscosityDeviationPct ?? null,
+          associatedProducts: data.associatedProducts ?? [],
+          defectRateImpact: data.defectRateImpact ?? null,
+          relatedAlertIds: data.relatedAlertIds ?? [],
         },
       });
       return serialize(row);

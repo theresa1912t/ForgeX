@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFactory } from '@/lib/factoryStore';
 import {
   CheckSquare,
@@ -13,20 +13,26 @@ import {
   Sparkles,
   ArrowRight,
   ExternalLink,
+  SearchCode,
 } from 'lucide-react';
 import { ActionTask } from '@/lib/types';
 
 export function ActionsModule() {
   const {
     actionTasks,
+    investigations,
     updateTaskStatus,
     completeTaskWithOutcome,
     setActiveTab,
     openInvestigation,
     isMutationPending,
+    activeTab,
+    selectedInvestigationId,
   } = useFactory();
 
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [highlightedGroupId, setHighlightedGroupId] = useState<string | null>(null);
+  const groupRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [completeModalTask, setCompleteModalTask] = useState<ActionTask | null>(null);
   const [actualResult, setActualResult] = useState('Recovered 920 units/hour. Valve M-03-V2 inspected, worn elastomer diaphragm replaced, recalibrated stroke pressure.');
   const [resolutionNotes, setResolutionNotes] = useState('Diaphragm seal kit replaced by Carlos Ruiz. Post-repair stroke test showed cycle time normalized to 1.82s and manifold vibration dropped to 2.15 mm/s.');
@@ -36,6 +42,47 @@ export function ActionsModule() {
     if (filterStatus === 'all') return true;
     return t.status.toLowerCase() === filterStatus.toLowerCase();
   });
+
+  // Grouped by investigation so it's immediately clear which investigation each task belongs to
+  // — tasks with no investigationId (legacy/manually-created ones) fall into their own bucket at
+  // the end rather than being hidden or mixed in ungrouped.
+  const NO_INVESTIGATION_KEY = '__no_investigation__';
+  const taskGroups: Array<{ investigationId: string; tasks: ActionTask[] }> = [];
+  for (const task of filteredTasks) {
+    const key = task.investigationId || NO_INVESTIGATION_KEY;
+    let group = taskGroups.find((g) => g.investigationId === key);
+    if (!group) {
+      group = { investigationId: key, tasks: [] };
+      taskGroups.push(group);
+    }
+    group.tasks.push(task);
+  }
+  taskGroups.sort((a, b) => {
+    if (a.investigationId === NO_INVESTIGATION_KEY) return 1;
+    if (b.investigationId === NO_INVESTIGATION_KEY) return -1;
+    return 0;
+  });
+
+  // Arriving here from an investigation's "View Work Order" / "Resolved in Action Center" button
+  // (which sets selectedInvestigationId before switching tabs — this module remounts fresh on
+  // every tab switch, so filterStatus is always back to 'all' by the time this runs) scrolls
+  // straight to that investigation's task group and briefly highlights it, instead of leaving
+  // the user to scan every group themselves.
+  useEffect(() => {
+    if (activeTab !== 'actions' || !selectedInvestigationId) return;
+    const frame = requestAnimationFrame(() => {
+      const el = groupRefs.current[selectedInvestigationId];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setHighlightedGroupId(selectedInvestigationId);
+      }
+    });
+    const timeout = setTimeout(() => setHighlightedGroupId(null), 2500);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timeout);
+    };
+  }, [activeTab, selectedInvestigationId]);
 
   const handleOpenCompleteModal = (task: ActionTask) => {
     setCompleteModalTask(task);
@@ -104,15 +151,75 @@ export function ActionsModule() {
         </div>
       </div>
 
-      {/* Task List Cards */}
-      <div className="space-y-4">
+      {/* Task List Cards, grouped by linked investigation */}
+      <div className="space-y-8">
         {filteredTasks.length === 0 ? (
           <div className="py-20 text-center text-[#5F6875] card-base">
             <CheckSquare className="w-8 h-8 mx-auto mb-2 text-[#8A93A0]" />
             <p className="text-[16px] font-semibold text-[#18202A]">No active tasks in this view</p>
           </div>
         ) : (
-          filteredTasks.map((task) => {
+          taskGroups.map((group) => {
+            const investigation =
+              group.investigationId !== NO_INVESTIGATION_KEY ? investigations[group.investigationId] : undefined;
+            const isUngrouped = group.investigationId === NO_INVESTIGATION_KEY;
+
+            const isHighlighted = highlightedGroupId === group.investigationId;
+
+            return (
+              <div
+                key={group.investigationId}
+                ref={(el) => {
+                  groupRefs.current[group.investigationId] = el;
+                }}
+                className={`space-y-3 scroll-mt-24 rounded-2xl transition-shadow duration-500 ${
+                  isHighlighted ? 'ring-2 ring-[#2F5BFF] ring-offset-4' : ''
+                }`}
+              >
+                {/* Group header */}
+                <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#EEF3FF] text-[#2F5BFF] flex items-center justify-center shrink-0">
+                      <SearchCode className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[14px] font-semibold text-[#18202A] truncate">
+                        {isUngrouped ? 'Not linked to an investigation' : investigation?.title ?? 'Investigation'}
+                      </div>
+                      <div className="text-[12px] text-[#5F6875]">
+                        {group.tasks.length} task{group.tasks.length > 1 ? 's' : ''}
+                        {investigation && <> · {investigation.lineName} · {investigation.machineName}</>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {investigation && (
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span
+                        className={`h-7 px-2.5 rounded-[6px] text-[13px] font-medium inline-flex items-center ${
+                          investigation.status === 'Resolved'
+                            ? 'bg-[#EDFDF2] text-[#18864B]'
+                            : investigation.status === 'Reopened'
+                            ? 'bg-[#FEF3F2] text-[#D92D20]'
+                            : 'bg-[#FEF7E6] text-[#B78103]'
+                        }`}
+                      >
+                        {investigation.status}
+                      </span>
+                      <button
+                        onClick={() => openInvestigation(group.investigationId, 'actions')}
+                        className="h-8 px-3 text-[13px] font-medium text-[#2F5BFF] hover:bg-[#EEF3FF] rounded-lg border border-[#D9E4FF] flex items-center gap-1.5 transition-colors"
+                      >
+                        <span>Open Investigation</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tasks in this group */}
+                <div className="space-y-4 pl-0 sm:pl-[42px]">
+                  {group.tasks.map((task) => {
             const isCompleted = task.status === 'Completed';
             const isHeroTask = task.investigationId === 'inv-line3-hero';
             return (
@@ -172,7 +279,7 @@ export function ActionsModule() {
                           <span>·</span>
                           <button
                             onClick={() => {
-                              openInvestigation(task.investigationId, 'actions');
+                              openInvestigation(task.investigationId!, 'actions');
                             }}
                             className="text-[#2F5BFF] hover:underline font-medium flex items-center gap-1"
                           >
@@ -227,6 +334,10 @@ export function ActionsModule() {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+            );
+                  })}
                 </div>
               </div>
             );

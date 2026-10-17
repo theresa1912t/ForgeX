@@ -7,7 +7,9 @@ import { safeDb } from './safeDb';
 import type { MaintenanceRecord } from '@/lib/types';
 import type { DbClient } from './types';
 
-function serialize<T extends { status: $Enums.MaintenanceStatus }>(row: T) {
+function serialize<T extends { status: $Enums.MaintenanceStatus }>(
+  row: T,
+): Omit<T, 'status'> & { status: MaintenanceRecord['status'] } {
   return { ...row, status: maintenanceStatusReverseMap[row.status] };
 }
 

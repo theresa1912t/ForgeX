@@ -6,16 +6,32 @@ import { safeDb } from './safeDb';
 import type { NotificationItem } from '@/lib/types';
 import type { DbClient } from './types';
 
+function serialize<T extends { createdAt: Date; linkModule: string | null; linkId: string | null }>(
+  row: T,
+): Omit<T, 'createdAt' | 'linkModule' | 'linkId'> & {
+  linkModule?: NotificationItem['linkModule'];
+  linkId?: NotificationItem['linkId'];
+} {
+  const { createdAt, linkModule, linkId, ...rest } = row;
+  return { ...rest, linkModule: linkModule ?? undefined, linkId: linkId ?? undefined };
+}
+
 export async function findAll(client: DbClient = prisma) {
   return safeDb(
-    () => client.notificationItem.findMany({ orderBy: { id: 'asc' } }),
+    async () => {
+      const rows = await client.notificationItem.findMany({ orderBy: { createdAt: 'desc' } });
+      return rows.map(serialize);
+    },
     initialNotifications
   );
 }
 
 export async function findById(id: string, client: DbClient = prisma) {
   return safeDb(
-    () => client.notificationItem.findUnique({ where: { id } }),
+    async () => {
+      const row = await client.notificationItem.findUnique({ where: { id } });
+      return row ? serialize(row) : null;
+    },
     () => initialNotifications.find((n) => n.id === id) || initialNotifications[0]
   );
 }
@@ -26,27 +42,36 @@ export async function create(
 ) {
   const notifId = `notif-${randomUUID()}`;
   return safeDb(
-    () => client.notificationItem.create({
-      data: {
-        id: notifId,
-        title: data.title,
-        message: data.message,
-        severity: data.severity,
-        category: data.category,
-        linkModule: data.linkModule ?? null,
-        linkId: data.linkId ?? null,
-        timestamp: 'Just now',
-        read: false,
-      },
-    }),
+    async () => {
+      const row = await client.notificationItem.create({
+        data: {
+          id: notifId,
+          title: data.title,
+          message: data.message,
+          severity: data.severity,
+          category: data.category,
+          linkModule: data.linkModule ?? null,
+          linkId: data.linkId ?? null,
+          timestamp: 'Just now',
+          read: false,
+        },
+      });
+      return serialize(row);
+    },
     () => ({ id: notifId, ...data, timestamp: 'Just now', read: false })
   );
 }
 
 export async function updateRead(id: string, read: boolean, client: DbClient = prisma) {
   return safeDb(
-    () => client.notificationItem.update({ where: { id }, data: { read } }),
-    () => ({ ...initialNotifications.find((n) => n.id === id), read })
+    async () => {
+      const row = await client.notificationItem.update({ where: { id }, data: { read } });
+      return serialize(row);
+    },
+    () => {
+      const existing = initialNotifications.find((n) => n.id === id) || initialNotifications[0];
+      return { ...existing, read };
+    }
   );
 }
 

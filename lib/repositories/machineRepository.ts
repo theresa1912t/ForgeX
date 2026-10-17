@@ -6,7 +6,9 @@ import { safeDb } from './safeDb';
 import type { Machine } from '@/lib/types';
 import type { DbClient } from './types';
 
-function serialize<T extends { status: $Enums.MachineStatus }>(row: T) {
+function serialize<T extends { status: $Enums.MachineStatus }>(
+  row: T,
+): Omit<T, 'status'> & { status: Machine['status'] } {
   return { ...row, status: machineStatusReverseMap[row.status] };
 }
 

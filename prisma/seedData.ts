@@ -73,6 +73,42 @@ export function buildProductionLineRows() {
   return initialProductionLines;
 }
 
+// Hourly production_metrics history (need-checking.md §7) for the hero machine, covering the
+// past 24 hours: a healthy run tapering into the current degraded state, so there's a real
+// historical series to query instead of only ever a live current snapshot. Not wired into
+// resetDemoState — this is seed-once history, not part of the hero incident's resettable state.
+export function buildProductionMetricRows(): Prisma.ProductionMetricCreateManyInput[] {
+  const machineId = 'mach-m03';
+  const targetUnitsPerHour = 5400;
+  const unitRevenue = 1.65;
+  const now = new Date();
+  const rows: Prisma.ProductionMetricCreateManyInput[] = [];
+
+  for (let hoursAgo = 23; hoursAgo >= 0; hoursAgo -= 1) {
+    const intervalEnd = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+    const intervalStart = new Date(intervalEnd.getTime() - 60 * 60 * 1000);
+    // Degradation begins ~4 hours ago, matching the hero incident's detected time.
+    const isDegraded = hoursAgo <= 4;
+    const actualUnits = isDegraded ? 4380 : 5340;
+    const defectRatePct = isDegraded ? 2.12 : 0.6;
+    const defectiveUnits = Math.round(actualUnits * (defectRatePct / 100));
+
+    rows.push({
+      machineId,
+      intervalStart,
+      intervalEnd,
+      expectedUnits: targetUnitsPerHour,
+      actualUnits,
+      goodUnits: actualUnits - defectiveUnits,
+      defectiveUnits,
+      unitRevenue,
+      source: 'Seed',
+    });
+  }
+
+  return rows;
+}
+
 export function buildMachineRows() {
   return initialMachines.map((m) => ({
     ...m,
@@ -126,8 +162,16 @@ export function buildActionTaskRows() {
   }));
 }
 
+// initialNotifications is already ordered newest-first (matches its "timestamp" display strings,
+// e.g. "10:42 AM" before "Yesterday 04:30 PM") — createdAt just needs to preserve that same
+// relative order for real sorting, spaced far enough apart that any notification created later
+// through the running app naturally sorts above all of these.
 export function buildNotificationRows() {
-  return initialNotifications;
+  const base = Date.now();
+  return initialNotifications.map((n, idx) => ({
+    ...n,
+    createdAt: new Date(base - idx * 60_000),
+  }));
 }
 
 export function buildMaintenanceRecordRows() {

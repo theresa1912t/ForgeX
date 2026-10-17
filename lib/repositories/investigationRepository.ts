@@ -15,20 +15,31 @@ const include = {
 
 type InvestigationWithRelations = Prisma.InvestigationGetPayload<{ include: typeof include }>;
 
-function serialize(investigation: InvestigationWithRelations) {
-  const { businessImpact, ...rest } = investigation;
+function serialize(investigation: InvestigationWithRelations): Investigation {
+  const { businessImpact, rootCauses, evidence, recommendations, timeline, sensorDeltas, resolvedAt, resolutionOutcome, ...rest } =
+    investigation;
   return {
     ...rest,
-    rootCauses: investigation.rootCauses.map((rc) => ({
+    timeline: timeline as unknown as Investigation['timeline'],
+    sensorDeltas: sensorDeltas as unknown as Investigation['sensorDeltas'],
+    resolvedAt: resolvedAt ?? undefined,
+    resolutionOutcome: (resolutionOutcome as unknown as Investigation['resolutionOutcome']) ?? undefined,
+    rootCauses: rootCauses.map(({ investigationId, ...rc }) => ({
       ...rc,
       status: rootCauseStatusReverseMap[rc.status],
     })),
-    recommendations: investigation.recommendations.map((rec) => ({
+    evidence: evidence.map(({ investigationId, ...ev }) => ev),
+    recommendations: recommendations.map((rec) => ({
       ...rec,
       status: recommendationStatusReverseMap[rec.status],
     })),
-    businessImpact: businessImpact ?? undefined,
-  };
+    businessImpact: businessImpact
+      ? (() => {
+          const { id, investigationId, ...impact } = businessImpact;
+          return impact;
+        })()
+      : undefined,
+  } as Investigation;
 }
 
 export async function findAll(client: DbClient = prisma) {
@@ -57,8 +68,10 @@ export async function updateStatus(
   client: DbClient = prisma,
 ) {
   return safeDb(
-    () => client.investigation.update({ where: { id }, data: { status } }),
-    () => ({ ...heroInvestigation, status })
+    async () => {
+      await client.investigation.update({ where: { id }, data: { status } });
+    },
+    undefined
   );
 }
 
@@ -72,15 +85,17 @@ export async function updateResolution(
   client: DbClient = prisma,
 ) {
   return safeDb(
-    () => client.investigation.update({
-      where: { id },
-      data: {
-        status: data.status,
-        resolvedAt: data.resolvedAt,
-        resolutionOutcome: data.resolutionOutcome as unknown as Prisma.InputJsonValue,
-      },
-    }),
-    () => ({ ...heroInvestigation, ...data })
+    async () => {
+      await client.investigation.update({
+        where: { id },
+        data: {
+          status: data.status,
+          resolvedAt: data.resolvedAt,
+          resolutionOutcome: data.resolutionOutcome as unknown as Prisma.InputJsonValue,
+        },
+      });
+    },
+    undefined
   );
 }
 

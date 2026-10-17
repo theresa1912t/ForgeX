@@ -28,6 +28,17 @@ import {
 import { formatCurrency, formatNumber } from '@/lib/calculations';
 import { RecommendedAction } from '@/lib/types';
 
+const HERO_INVESTIGATION_ID = 'inv-line3-hero';
+
+// The 1-click dispatch shortcut skips an assignment step, so it needs a default assignee —
+// mapped to the real seeded person who actually owns that recommendation's discipline, instead
+// of a single hardcoded name regardless of category.
+const DEFAULT_ASSIGNEE_BY_OWNER: Record<string, string> = {
+  Maintenance: 'Carlos Ruiz',
+  Quality: 'Priya Patel',
+  Operations: 'Marcus Vance',
+};
+
 export function InvestigationsModule() {
   const {
     investigations,
@@ -40,6 +51,7 @@ export function InvestigationsModule() {
     previousTab,
     showToast,
     resetDemoToHeroState,
+    isMutationPending,
   } = useFactory();
 
   const currentInv =
@@ -47,7 +59,9 @@ export function InvestigationsModule() {
     investigations['inv-line3-hero'] ||
     Object.values(investigations)[0];
 
-  const [activeEvidenceTab, setActiveEvidenceTab] = useState<'synthesis' | 'sensors' | 'deep_dive'>('synthesis');
+  // Defaults to 'sensors' (not 'synthesis') since the synthesis tab only exists for the hero
+  // case — defaulting to it would leave non-hero investigations landing on an empty tab.
+  const [activeEvidenceTab, setActiveEvidenceTab] = useState<'synthesis' | 'sensors' | 'deep_dive'>('sensors');
   const [expandedCauseId, setExpandedCauseId] = useState<string>('rc-1');
 
   if (!currentInv) {
@@ -84,45 +98,64 @@ export function InvestigationsModule() {
   }
 
   const isResolved = currentInv.status === 'Resolved';
+  const isHero = currentInv.id === HERO_INVESTIGATION_ID;
   const { businessImpact } = currentInv;
-  const linkedTask = actionTasks.find(
-    (t) => t.investigationId === currentInv.id || t.alertId === 'alt-line3-loss'
-  );
+  // Prefer a task actually tied to THIS investigation; only fall back to matching by alertId for
+  // legacy tasks with no investigationId set — otherwise a different, unrelated task sharing the
+  // same alert (e.g. an old seeded one) could be picked instead.
+  const linkedTask =
+    actionTasks.find((t) => t.investigationId === currentInv.id) ||
+    actionTasks.find((t) => !t.investigationId && t.alertId === currentInv.alertId);
   const isTaskDispatched = Boolean(linkedTask);
 
+  // Every real investigation always has >=1 recommendation (generateInvestigation.ts throws
+  // before creating one with none) — this fallback is a defensive no-data placeholder, so it
+  // stays neutral rather than inventing specifics for an investigation it knows nothing about.
   const primaryRec = currentInv.recommendations?.[0] || {
-    id: 'rec-1',
+    id: 'rec-fallback',
     investigationId: currentInv.id,
-    title: 'Inspect filling valve M-03-V2 & replace worn diaphragm seal',
-    reason: 'Mechanical wear on elastomer diaphragm head #4/#8 is causing fluid throttling, pressure drop, and vibration.',
-    priority: 'Critical',
-    owner: 'Maintenance',
-    estimatedEffort: '30 minutes',
-    expectedImpact: 'Recover 1,000 bottles/hr (~$1,683/hr revenue)',
-    evidence: 'Vibration +38%, cycle time +22%',
+    title: 'No recommendation on record',
+    reason: currentInv.summary,
+    priority: 'Medium',
+    owner: 'Operations',
+    estimatedEffort: 'TBD',
+    expectedImpact: 'Not yet quantified',
+    evidence: '',
     status: 'Pending',
   };
 
+  const topCause = currentInv.rootCauses?.[0];
+
   // Direct In-Place Handlers (Zero Tab Bouncing)
   const handleQuickDispatch = () => {
+    const assignee = DEFAULT_ASSIGNEE_BY_OWNER[primaryRec.owner] || 'Carlos Ruiz';
     createActionTaskFromRecommendation(
       currentInv.id,
       primaryRec,
-      'Carlos Ruiz',
+      assignee,
       'Today (Within 45 mins)'
     );
-    showToast('Work order dispatched to Carlos Ruiz (Senior Maintenance Tech)', 'success');
+    showToast(`Work order dispatched to ${assignee}`, 'success');
   };
 
   const handleQuickComplete = () => {
-    const taskId = linkedTask?.id || 'tsk-line3-filler';
-    completeTaskWithOutcome(
-      taskId,
-      'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
-      'Completed replacement under +0.2 bar backpressure test. Output normalized to 5,380 bph.',
-      1000
-    );
-    showToast('Maintenance verified! Line 3 output fully restored to 5,380 bottles/hr', 'success');
+    if (!linkedTask) return;
+    if (isHero) {
+      completeTaskWithOutcome(
+        linkedTask.id,
+        'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
+        'Completed replacement under +0.2 bar backpressure test. Output normalized to 5,380 bph.',
+        1000
+      );
+      showToast('Maintenance verified! Line 3 output fully restored to 5,380 bottles/hr', 'success');
+    } else {
+      completeTaskWithOutcome(
+        linkedTask.id,
+        `${linkedTask.title} completed.`,
+        linkedTask.description,
+      );
+      showToast(`Task "${linkedTask.title}" marked complete`, 'success');
+    }
   };
 
   const handleReset = () => {
@@ -151,7 +184,7 @@ export function InvestigationsModule() {
         </div>
 
         <div className="flex items-center gap-2">
-          {isResolved && (
+          {isResolved && isHero && (
             <button
               onClick={handleReset}
               className="h-8 px-3 text-[12px] font-medium text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
@@ -191,7 +224,9 @@ export function InvestigationsModule() {
             </div>
             <div>
               <div className="text-[11px] font-semibold text-emerald-800 uppercase">Step 1: Detection</div>
-              <div className="text-[13px] font-bold text-slate-900 leading-tight">Speed Deficit (-18.9%)</div>
+              <div className="text-[13px] font-bold text-slate-900 leading-tight">
+                {isHero ? 'Speed Deficit (-18.9%)' : `${currentInv.outputVariancePct}% vs target`}
+              </div>
             </div>
           </div>
 
@@ -202,7 +237,9 @@ export function InvestigationsModule() {
             </div>
             <div>
               <div className="text-[11px] font-semibold text-emerald-800 uppercase">Step 2: Diagnosis</div>
-              <div className="text-[13px] font-bold text-slate-900 leading-tight">Valve #4 Diaphragm Seal</div>
+              <div className="text-[13px] font-bold text-slate-900 leading-tight truncate">
+                {isHero ? 'Valve #4 Diaphragm Seal' : (topCause?.title ?? 'Not yet determined')}
+              </div>
             </div>
           </div>
 
@@ -231,8 +268,8 @@ export function InvestigationsModule() {
               >
                 Step 3: Action
               </div>
-              <div className="text-[13px] font-bold text-slate-900 leading-tight">
-                {isTaskDispatched ? 'Carlos Ruiz Assigned' : 'Dispatch Maintenance'}
+              <div className="text-[13px] font-bold text-slate-900 leading-tight truncate">
+                {isTaskDispatched ? `${linkedTask?.assignedTo} Assigned` : 'Dispatch Maintenance'}
               </div>
             </div>
           </div>
@@ -263,7 +300,11 @@ export function InvestigationsModule() {
                 Step 4: Recovery
               </div>
               <div className="text-[13px] font-bold text-slate-900 leading-tight">
-                {isResolved ? 'Restored (5,380 bph)' : 'Pending Verification'}
+                {isResolved
+                  ? isHero
+                    ? 'Restored (5,380 bph)'
+                    : 'Resolved'
+                  : 'Pending Verification'}
               </div>
             </div>
           </div>
@@ -272,7 +313,7 @@ export function InvestigationsModule() {
 
       {/* 3. The Linear Triage Core (3 High-Clarity Pillars) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        
+
         {/* Pillar 1: The Problem (What is happening?) */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
           <div>
@@ -295,19 +336,19 @@ export function InvestigationsModule() {
               {currentInv.title}
             </h3>
             <p className="text-[13px] text-slate-500 mt-1">
-              Line 3 Aseptic Rotary Filler is running below target speed during the 200ml Almond Milk run.
+              {currentInv.summary}
             </p>
 
             <div className="mt-4 p-3 bg-slate-50 rounded-lg space-y-2 text-[13px]">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Current Velocity:</span>
+                <span className="text-slate-500">Output Variance:</span>
                 <span className={`font-mono font-bold ${isResolved ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  {isResolved ? '5,380 bph (+1,000)' : '4,380 bph (-18.9%)'}
+                  {currentInv.outputVariancePct}%
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Target Velocity:</span>
-                <span className="font-mono font-semibold text-slate-800">5,400 bph</span>
+                <span className="text-slate-500">Product:</span>
+                <span className="font-mono font-semibold text-slate-800 truncate">{currentInv.productName || 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Financial Burn Rate:</span>
@@ -319,7 +360,7 @@ export function InvestigationsModule() {
           </div>
 
           <div className="pt-4 border-t border-slate-100 mt-4 text-[12px] text-slate-500 flex items-center justify-between">
-            <span>Shift Deficit: <strong>{isResolved ? '0 units' : '1,020 units/hr'}</strong></span>
+            <span>Duration: <strong>{currentInv.duration}</strong></span>
             <span>Shift: <strong>{currentInv.shift}</strong></span>
           </div>
         </div>
@@ -329,40 +370,36 @@ export function InvestigationsModule() {
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
-                2. Confirmed Root Cause
+                2. {topCause ? (topCause.status === 'Likely Contributor' ? 'Likely' : topCause.status) + ' Root Cause' : 'Root Cause'}
               </span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                68% Confidence · Rank #1
+                {topCause?.confidence ?? 0}% Confidence · Rank #1
               </span>
             </div>
 
             <h3 className="text-[16px] font-bold text-slate-900 mt-3 leading-snug">
-              Valve #4 Diaphragm Micro-Tear
+              {topCause?.title ?? 'Not yet determined'}
             </h3>
             <p className="text-[13px] text-slate-600 mt-1 leading-relaxed">
-              Elastomer fatigue on rotary valve head #4 prevents full nozzle opening, causing fluid throttling, pressure loss, and vibration.
+              {topCause?.summary ?? currentInv.summary}
             </p>
 
-            {/* 3 Core Sensor Proof Items */}
+            {/* Real evidence items for this investigation, up to 3 */}
             <div className="mt-4 space-y-2 text-[12px]">
-              <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                <span className="text-slate-600">Vibration (PLC R:102):</span>
-                <span className="font-mono font-bold text-rose-700">3.31 mm/s (+38% spike)</span>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                <span className="text-slate-600">Dosing Cycle Time:</span>
-                <span className="font-mono font-bold text-rose-700">0.82s (+22% delay)</span>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                <span className="text-slate-600">Manifold Pressure:</span>
-                <span className="font-mono font-bold text-amber-700">2.45 bar (-21% drop)</span>
-              </div>
+              {(currentInv.evidence ?? []).slice(0, 3).map((ev) => (
+                <div key={ev.id} className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                  <span className="text-slate-600 truncate">{ev.metric || ev.title}:</span>
+                  <span className="font-mono font-bold text-rose-700 shrink-0">{ev.delta}</span>
+                </div>
+              ))}
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-100 mt-4 text-[12px] text-slate-500 flex items-center justify-between">
-            <span>Machine: <strong>Aseptic Filler M-03</strong></span>
-            <span>Secondary factor: <strong>Milk Viscosity (+8.4%)</strong></span>
+            <span>Machine: <strong className="truncate">{currentInv.machineName}</strong></span>
+            {currentInv.rootCauses?.[1] && (
+              <span>Secondary: <strong className="truncate">{currentInv.rootCauses[1].title}</strong></span>
+            )}
           </div>
         </div>
 
@@ -399,22 +436,24 @@ export function InvestigationsModule() {
               {primaryRec.title}
             </h3>
             <p className="text-[13px] text-slate-600 mt-1 leading-relaxed">
-              Target: Replace EPDM diaphragm seal kit on Valve M-03-V2. Recover +1,000 bottles/hr ($1,683/hr value).
+              {primaryRec.reason}
             </p>
 
             {/* In-Place Status Display */}
             <div className="mt-4 p-3 bg-white/80 rounded-lg border border-slate-200/80 space-y-1.5 text-[13px]">
               <div className="flex justify-between">
                 <span className="text-slate-500">Technician:</span>
-                <span className="font-semibold text-slate-900">Carlos Ruiz (Lead Mechanic)</span>
+                <span className="font-semibold text-slate-900">
+                  {linkedTask?.assignedTo ?? (DEFAULT_ASSIGNEE_BY_OWNER[primaryRec.owner] || primaryRec.owner)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Estimated Effort:</span>
-                <span className="font-semibold text-slate-900">30 minutes</span>
+                <span className="font-semibold text-slate-900">{primaryRec.estimatedEffort}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Expected Result:</span>
-                <span className="font-semibold text-emerald-700">+1,000 bph throughput</span>
+                <span className="font-semibold text-emerald-700 truncate">{primaryRec.expectedImpact}</span>
               </div>
             </div>
           </div>
@@ -425,40 +464,54 @@ export function InvestigationsModule() {
               <div className="p-3 bg-emerald-100/70 border border-emerald-300 rounded-lg text-center space-y-2">
                 <div className="flex items-center justify-center gap-1.5 text-emerald-800 font-bold text-[13px]">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Line 3 Speed Fully Restored</span>
+                  <span>{currentInv.lineName} Issue Resolved</span>
                 </div>
                 <p className="text-[12px] text-emerald-700">
-                  Valve replaced. Velocity restored to 5,380 bph and scrap rates returned to nominal baseline.
+                  {currentInv.resolutionOutcome?.notes ?? currentInv.summary}
                 </p>
-                <button
-                  onClick={handleReset}
-                  className="w-full h-8 px-3 text-[12px] font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Replay / Reset Scenario</span>
-                </button>
+                {isHero && (
+                  <button
+                    onClick={handleReset}
+                    className="w-full h-8 px-3 text-[12px] font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Replay / Reset Scenario</span>
+                  </button>
+                )}
               </div>
             ) : isTaskDispatched ? (
               <div className="space-y-2">
                 <div className="text-[12px] text-amber-800 font-medium flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Carlos Ruiz on-site at Filler M-03. Replacement in progress.</span>
+                  <span>{linkedTask?.assignedTo} dispatched to {currentInv.machineName}. Work in progress.</span>
                 </div>
                 <button
                   onClick={handleQuickComplete}
-                  className="w-full h-10 px-4 text-[13px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                  disabled={isMutationPending(`completeTaskWithOutcome:${linkedTask?.id}`)}
+                  className="w-full h-10 px-4 text-[13px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Verify Fix &amp; Restore Line Speed</span>
+                  <span>
+                    {isMutationPending(`completeTaskWithOutcome:${linkedTask?.id}`)
+                      ? 'Completing...'
+                      : isHero
+                      ? 'Verify Fix & Restore Line Speed'
+                      : 'Mark Task Complete'}
+                  </span>
                 </button>
               </div>
             ) : (
               <button
                 onClick={handleQuickDispatch}
-                className="w-full h-11 px-4 text-[14px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                disabled={isMutationPending(`createActionTaskFromRecommendation:${primaryRec.id}`)}
+                className="w-full h-11 px-4 text-[14px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <ClipboardList className="w-4 h-4" />
-                <span>1-Click Dispatch Carlos Ruiz</span>
+                <span>
+                  {isMutationPending(`createActionTaskFromRecommendation:${primaryRec.id}`)
+                    ? 'Dispatching...'
+                    : '1-Click Dispatch Work Order'}
+                </span>
               </button>
             )}
           </div>
@@ -473,16 +526,18 @@ export function InvestigationsModule() {
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-bold text-slate-700">Deep Diagnostic Evidence:</span>
             <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-lg">
-              <button
-                onClick={() => setActiveEvidenceTab('synthesis')}
-                className={`px-3 py-1.5 text-[12px] font-semibold rounded-md transition-colors cursor-pointer ${
-                  activeEvidenceTab === 'synthesis'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Multi-Signal Triangulation
-              </button>
+              {isHero && (
+                <button
+                  onClick={() => setActiveEvidenceTab('synthesis')}
+                  className={`px-3 py-1.5 text-[12px] font-semibold rounded-md transition-colors cursor-pointer ${
+                    activeEvidenceTab === 'synthesis'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Multi-Signal Triangulation
+                </button>
+              )}
               <button
                 onClick={() => setActiveEvidenceTab('sensors')}
                 className={`px-3 py-1.5 text-[12px] font-semibold rounded-md transition-colors cursor-pointer ${
@@ -491,7 +546,7 @@ export function InvestigationsModule() {
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Live Sensor Registers ({currentInv.sensorDeltas?.length || 5})
+                Live Sensor Registers ({currentInv.sensorDeltas?.length || 0})
               </button>
               <button
                 onClick={() => setActiveEvidenceTab('deep_dive')}
@@ -501,18 +556,19 @@ export function InvestigationsModule() {
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Root-Cause Ranking &amp; 5-Whys
+                Root-Cause Ranking &amp; Evidence
               </button>
             </div>
           </div>
 
           <span className="text-[12px] text-slate-500 font-mono">
-            Line 3 OT Stream · Sensor Sync Active
+            {currentInv.lineName} · {currentInv.machineName}
           </span>
         </div>
 
-        {/* Tab Content 1: Multi-Signal Synthesis */}
-        {activeEvidenceTab === 'synthesis' && (
+        {/* Tab Content 1: Multi-Signal Synthesis — hero-only narrative detail with no generic
+            equivalent fields on Investigation; other cases use the real evidence/root-cause tabs. */}
+        {isHero && activeEvidenceTab === 'synthesis' && (
           <div className="p-6 space-y-4 animate-in fade-in duration-150">
             <p className="text-[13px] text-slate-600 leading-relaxed">
               FactoryLens cross-correlates 3 distinct data pipelines to confirm root cause without false-positive maintenance dispatches:
@@ -576,47 +632,51 @@ export function InvestigationsModule() {
         {/* Tab Content 2: Sensor Telemetry Registers */}
         {activeEvidenceTab === 'sensors' && (
           <div className="p-6 space-y-4 animate-in fade-in duration-150">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {currentInv.sensorDeltas?.map((sensor, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3.5 rounded-xl border ${
-                    sensor.isAbnormal && !isResolved
-                      ? 'border-rose-200 bg-rose-50/40'
-                      : 'border-slate-200 bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[12px] font-bold text-slate-900 truncate">{sensor.parameter}</span>
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        sensor.isAbnormal && !isResolved
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-slate-200 text-slate-700'
-                      }`}
-                    >
-                      {isResolved ? 'Nominal' : sensor.changePct}
-                    </span>
-                  </div>
-                  <div className="text-[12px] space-y-0.5 text-slate-600">
-                    <div className="flex justify-between">
-                      <span>Baseline:</span>
-                      <span className="font-mono text-slate-900">{sensor.baseline}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold">
-                      <span>Observed:</span>
-                      <span className={`font-mono ${sensor.isAbnormal && !isResolved ? 'text-rose-700' : 'text-slate-900'}`}>
-                        {isResolved ? sensor.baseline : sensor.current}
+            {(currentInv.sensorDeltas?.length ?? 0) === 0 ? (
+              <p className="text-[13px] text-slate-500">No sensor deltas recorded for this investigation.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {currentInv.sensorDeltas?.map((sensor, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-3.5 rounded-xl border ${
+                      sensor.isAbnormal && !isResolved
+                        ? 'border-rose-200 bg-rose-50/40'
+                        : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[12px] font-bold text-slate-900 truncate">{sensor.parameter}</span>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          sensor.isAbnormal && !isResolved
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {isResolved ? 'Nominal' : sensor.changePct}
                       </span>
                     </div>
+                    <div className="text-[12px] space-y-0.5 text-slate-600">
+                      <div className="flex justify-between">
+                        <span>Baseline:</span>
+                        <span className="font-mono text-slate-900">{sensor.baseline}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold">
+                        <span>Observed:</span>
+                        <span className={`font-mono ${sensor.isAbnormal && !isResolved ? 'text-rose-700' : 'text-slate-900'}`}>
+                          {isResolved ? sensor.baseline : sensor.current}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Tab Content 3: Ranked Causes & 5-Whys */}
+        {/* Tab Content 3: Ranked Causes & Evidence */}
         {activeEvidenceTab === 'deep_dive' && (
           <div className="p-6 space-y-3 animate-in fade-in duration-150">
             {currentInv.rootCauses?.map((cause) => {
