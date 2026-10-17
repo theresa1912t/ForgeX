@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Self-contained build output (copies .next/static and public/ into a predictable structure) —
+  // required for Cloud Run-style deploys like AI Studio's; without it static assets (incl. CSS)
+  // can 404 in the deploy container even though the build succeeds locally.
+  output: 'standalone',
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
