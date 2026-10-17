@@ -256,3 +256,65 @@ fixed (next pass):
    which investigation (hero or AI-generated) is open. Predates this session's backend work;
    `InvestigationDrawer.tsx` (the slide-over panel) does **not** have this problem and correctly
    displays real data.
+
+(All 3 fixed later the same day — see section 10.)
+
+## 10. Merge with `main` + Incident Management PRD gap analysis (2026-10-17)
+
+Merged in `theresa1912t/ForgeX`'s `main` branch (LactaPure Dairy rebrand, 3-tab investigation
+redesign, nav refactor). One side effect worth flagging: commit `0d81859` ("streamline navigation
+and investigation flow") deliberately dropped `InvestigationDrawer`'s only mount point
+(`app/page.tsx`) and all 8 of its trigger call sites, replacing the slide-over-drawer pattern with
+always routing to the full Investigations workbench. The component itself is intact and still
+gets maintained — it's just currently unreachable from the UI. Decision: leave it in place (not
+delete) in case it's wired back in later.
+
+Separately, the product team supplied `need-checking.md` — a PRD for a general **Machine Failure
+Monitoring & Incident Management** system. Audited it against the current codebase: the core
+incident lifecycle already exists under different names (`Alert` + `Investigation` + `ActionTask`
+instead of one unified `incident`). Full gap analysis published as a Claude Doc (ask Bagus for the
+link if needed). Shipped this session from that audit's "minimal-change plan":
+
+- Server-side status-transition validation (`lib/domain/statusTransitions.ts`), closing a real
+  hole where `PATCH /api/v1/action-tasks/[id]` accepted any client-supplied status.
+- Manual incident registration ("Report Issue") — PRD Journey A.
+- A `Reopened` lifecycle state (`Alert` + `Investigation`) with eligibility validation.
+- An append-only `IncidentEvent` audit table, wired into every major lifecycle transition.
+- A `ProductionMetric` history table (schema + 24 hourly seed rows for `mach-m03`).
+- A "Simulate Failure" scenario picker (PRD §9's 5 named scenarios).
+- Removed a hardcoded `$1.25/unit` blanket revenue rate on the Dashboard.
+- Notifications now fire for Report Issue / Reopen / Simulate Failure too (were silently missing).
+- `ActionsModule.tsx`'s task list is now grouped by linked investigation, with "View Work
+  Order"/"Resolved in Action Center" auto-scrolling + highlighting the right group.
+
+### TODO — outstanding PRD gaps (not started; pick up as token budget allows)
+
+- [ ] **Surface `IncidentEvent` in the UI.** The audit table and writes exist
+  (`lib/repositories/incidentEventRepository.ts`), but nothing reads it back — no `GET` API
+  route, no UI component anywhere. This directly blocks the PRD's own Definition of Done: "see a
+  complete activity timeline."
+- [ ] **Actually use `ProductionMetric`.** Table + seed data exist, but no usecase, calculation,
+  or UI reads from it yet — the PRD's duration-aware revenue formula (`expected_units =
+  expected_units_per_hour × affected_duration_hours`, §8) still isn't computed anywhere in the app.
+- [ ] **Add a `VERIFYING` stage** between "task completed" and "incident resolved" (§5, Journey B
+  steps 7–9) — `completeActionTask` currently jumps straight to Resolved with no explicit
+  "confirm recovery" gate.
+- [ ] **Split suspected vs. confirmed root cause** (§6.3) — `RootCause.status` has no such
+  distinction today.
+- [ ] **Let a technician add freeform findings/comments** to an investigation after it's
+  created — all investigation content is currently AI/heuristic-generated once, at creation time,
+  with no way to append notes later.
+- [ ] **Dashboard cards from §6.6** — still missing "Active incidents", "Critical/high-severity
+  incidents", "Machines stopped", incidents-by-status/severity, incidents-by-machine/line, and
+  "longest-running active incidents" views.
+- [ ] **5 PRD roles vs. our 3 RBAC tiers** — Admin/Manager/Viewer are permission tiers, not the
+  PRD's workflow-stage actors (operator / technician / supervisor / production manager / demo
+  admin). Decide whether to map onto them or leave as-is.
+- [ ] **Pagination** (§10) — every list repository still returns its full table; fine at demo
+  scale, but named explicitly by the PRD for "growing incident histories."
+- [ ] **Human-readable `incident_number`** (§7) — IDs are still `alert-user-<uuid>`, not a
+  collision-safe readable number like `INC-0042`.
+
+### Already covered — don't re-litigate
+`status`/`severity` indexes on `Alert` were added as a side effect of the `IncidentEvent`
+migration. See the bullet list above for everything else shipped this session.
