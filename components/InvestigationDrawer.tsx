@@ -20,6 +20,17 @@ import {
 import { formatCurrency, formatNumber } from '@/lib/calculations';
 import { RecommendedAction } from '@/lib/types';
 
+const HERO_INVESTIGATION_ID = 'inv-line3-hero';
+
+// The 1-click "dispatch" shortcut skips the assign modal, so it needs a default assignee —
+// mapped to the real seeded person who actually owns that recommendation's discipline, instead
+// of a single hardcoded name regardless of category.
+const DEFAULT_ASSIGNEE_BY_OWNER: Record<string, string> = {
+  Maintenance: 'Carlos Ruiz',
+  Quality: 'Priya Patel',
+  Operations: 'Marcus Vance',
+};
+
 export function InvestigationDrawer() {
   const {
     investigationDrawerOpen,
@@ -38,26 +49,30 @@ export function InvestigationDrawer() {
 
   if (!investigationDrawerOpen) return null;
 
-  const invId = activeDrawerInvestigationId || 'inv-line3-hero';
-  const investigation = investigations[invId] || investigations['inv-line3-hero'];
+  const invId = activeDrawerInvestigationId || HERO_INVESTIGATION_ID;
+  const investigation = investigations[invId] || investigations[HERO_INVESTIGATION_ID];
 
   if (!investigation) return null;
 
+  const isHero = investigation.id === HERO_INVESTIGATION_ID;
   const isResolved = investigation.status === 'Resolved';
   const linkedTask = actionTasks.find(
-    (t) => t.investigationId === investigation.id || t.alertId === 'alt-line3-loss'
+    (t) => t.investigationId === investigation.id || t.alertId === investigation.alertId
   );
 
+  // Every real investigation always has >=1 recommendation (generateInvestigation.ts throws
+  // before creating one with none) — this fallback is a defensive no-data placeholder, so it
+  // stays neutral rather than inventing specifics for an investigation it knows nothing about.
   const primaryRec = investigation.recommendations?.[0] || {
-    id: 'rec-1',
+    id: 'rec-fallback',
     investigationId: investigation.id,
-    title: 'Inspect filling valve M-03-V2 & replace worn diaphragm seal',
-    reason: 'Mechanical wear on elastomer diaphragm head #4/#8 is causing fluid throttling, pressure drop, and vibration.',
-    priority: 'Critical',
-    owner: 'Maintenance',
-    estimatedEffort: '30 minutes',
-    expectedImpact: 'Recover 1,000 bottles/hr (~$1,683/hr revenue)',
-    evidence: 'Vibration +38%, cycle time +22%',
+    title: 'No recommendation on record',
+    reason: investigation.summary,
+    priority: 'Medium',
+    owner: 'Operations',
+    estimatedEffort: 'TBD',
+    expectedImpact: 'Not yet quantified',
+    evidence: '',
     status: 'Pending',
   };
 
@@ -67,7 +82,7 @@ export function InvestigationDrawer() {
   };
 
   const handleCreateTask = (rec: RecommendedAction) => {
-    const assignee = 'Carlos Ruiz';
+    const assignee = DEFAULT_ASSIGNEE_BY_OWNER[rec.owner] || 'Carlos Ruiz';
     const dueDate = 'Today (Within 45 mins)';
     createActionTaskFromRecommendation(investigation.id, rec, assignee, dueDate);
     showToast(`Dispatched work order to ${assignee}: "${rec.title}"`, 'success');
@@ -149,10 +164,20 @@ export function InvestigationDrawer() {
             <div className="p-4 rounded-xl border border-[#A6F4C5] bg-[#EDFDF2]/80">
               <div className="flex items-center gap-2 text-[14px] font-bold text-[#18864B] mb-1">
                 <CheckCircle2 className="w-4 h-4 text-[#18864B]" />
-                <span>Line 3 Speed Fully Restored (5,380 bph)</span>
+                <span>
+                  {investigation.lineName} Issue Resolved
+                  {investigation.resolutionOutcome && (
+                    <> (+{investigation.resolutionOutcome.recoveredUnitsPerHour} units/hr recovered)</>
+                  )}
+                </span>
               </div>
               <p className="text-[13px] text-[#18864B] leading-relaxed">
-                Filling valve M-03-V2 diaphragm seal replaced. Output recovered by <strong>+1,000 bottles/hr</strong> and defect rates returned to normal.
+                {investigation.resolutionOutcome?.notes ?? investigation.summary}
+                {investigation.resolutionOutcome && (
+                  <>
+                    {' '}Signed off by <strong>{investigation.resolutionOutcome.completedBy}</strong>.
+                  </>
+                )}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2.5">
                 <button
@@ -183,30 +208,43 @@ export function InvestigationDrawer() {
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2 text-[13px] font-bold text-[#18864B]">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Work Order Dispatched: Carlos Ruiz</span>
+                  <span>Work Order Dispatched: {linkedTask.assignedTo}</span>
                 </div>
                 <span className="text-[11px] font-semibold text-[#18864B] px-2 py-0.5 rounded bg-[#EDFDF2] border border-[#A6F4C5]">
                   In Progress
                 </span>
               </div>
               <p className="text-[13px] text-[#5F6875] mb-3 leading-relaxed">
-                EPDM diaphragm kit replacement scheduled on Aseptic Filler M-03. After installation, verify line recovery below:
+                {linkedTask.description}
               </p>
               <button
                 onClick={() => {
-                  completeTaskWithOutcome(
-                    linkedTask.id,
-                    'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
-                    'Completed replacement under +0.2 bar backpressure test. Output normalized.',
-                    1000
-                  );
-                  showToast('Maintenance marked complete. Line 3 speed restored to 5,380 bottles/hr!', 'success');
+                  if (isHero) {
+                    completeTaskWithOutcome(
+                      linkedTask.id,
+                      'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
+                      'Completed replacement under +0.2 bar backpressure test. Output normalized.',
+                      1000
+                    );
+                  } else {
+                    completeTaskWithOutcome(
+                      linkedTask.id,
+                      `${linkedTask.title} completed.`,
+                      linkedTask.description,
+                    );
+                  }
                 }}
                 disabled={isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)}
                 className="w-full h-9 px-4 text-[13px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>{isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`) ? 'Completing...' : 'Complete Maintenance & Restore Speed'}</span>
+                <span>
+                  {isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)
+                    ? 'Completing...'
+                    : isHero
+                    ? 'Complete Maintenance & Restore Speed'
+                    : 'Mark Task Complete'}
+                </span>
               </button>
             </div>
           ) : (
@@ -214,8 +252,12 @@ export function InvestigationDrawer() {
               <div className="flex items-center gap-2.5">
                 <AlertTriangle className="w-4 h-4 text-[#B54708] shrink-0" />
                 <div>
-                  <div className="text-[13px] font-bold text-[#B54708]">Line 3 Speed Loss Alert</div>
-                  <div className="text-[12px] text-[#7A5E0B]">Action required to prevent further scrap</div>
+                  <div className="text-[13px] font-bold text-[#B54708]">
+                    {isHero ? 'Line 3 Speed Loss Alert' : `${investigation.lineName} — Action Required`}
+                  </div>
+                  <div className="text-[12px] text-[#7A5E0B]">
+                    {isHero ? 'Action required to prevent further scrap' : 'No work order dispatched yet'}
+                  </div>
                 </div>
               </div>
               <button
@@ -237,24 +279,24 @@ export function InvestigationDrawer() {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3.5 rounded-xl border border-[#FECDCA] bg-[#FEF3F2]/40">
                 <div className="text-[12px] font-medium text-[#5F6875] flex items-center justify-between">
-                  <span>Speed Deficit</span>
+                  <span>Output Variance</span>
                   <TrendingDown className="w-3.5 h-3.5 text-[#D92D20]" />
                 </div>
                 <div className="text-[20px] font-bold text-[#D92D20] mt-1 font-mono">
                   {investigation.outputVariancePct}%
                 </div>
                 <div className="text-[12px] text-[#D92D20] mt-0.5 font-medium">
-                  4,380 / 5,400 bph (-1,020 bph)
+                  {isHero ? '4,380 / 5,400 bph (-1,020 bph)' : 'vs planned target'}
                 </div>
               </div>
 
               <div className="p-3.5 rounded-xl border border-[#FEDF89] bg-[#FFFBF5]">
                 <div className="text-[12px] font-medium text-[#5F6875]">Run-Rate Financial Loss</div>
                 <div className="text-[20px] font-bold text-[#B54708] mt-1 font-mono">
-                  ${investigation.businessImpact?.currentLossRatePerHour || 1683}/hr
+                  ${formatNumber(investigation.businessImpact?.currentLossRatePerHour ?? 0)}/hr
                 </div>
                 <div className="text-[12px] text-[#7A5E0B] mt-0.5">
-                  {formatCurrency(investigation.businessImpact?.estimatedRevenueLoss || 3366)} shift loss
+                  {formatCurrency(investigation.businessImpact?.estimatedRevenueLoss ?? 0)} shift loss
                 </div>
               </div>
             </div>
@@ -268,48 +310,63 @@ export function InvestigationDrawer() {
                 <span>Primary Root Cause (Rank #1)</span>
               </div>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-[#EEF3FF] text-[#2F5BFF] border border-[#C7D7FE]">
-                68% Confidence
+                {investigation.rootCauses[0]?.confidence ?? 0}% Confidence
               </span>
             </div>
 
             <p className="text-[13px] font-medium text-[#18202A] leading-relaxed">
-              {investigation.rootCauses[0]?.title ||
-                'Aseptic filling valve #4 diaphragm micro-tear on Filler M-03'}
+              {investigation.rootCauses[0]?.title ?? 'No root cause on record'}
             </p>
 
-            {/* Quick Evidence Bullets */}
-            <div className="mt-3 pt-3 border-t border-[#D9E4FF] grid grid-cols-2 gap-2 text-[12px]">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20]" />
-                <span className="text-[#5F6875]">Vibration:</span>
-                <strong className="text-[#18202A] font-mono">3.31 mm/s (+38%)</strong>
+            {/* Quick Evidence Bullets — the hero scenario's exact telemetry readout is narrative
+                detail with no generic equivalent fields; other investigations render their own
+                real evidence array instead of inheriting the hero's numbers. */}
+            {isHero ? (
+              <div className="mt-3 pt-3 border-t border-[#D9E4FF] grid grid-cols-2 gap-2 text-[12px]">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20]" />
+                  <span className="text-[#5F6875]">Vibration:</span>
+                  <strong className="text-[#18202A] font-mono">3.31 mm/s (+38%)</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20]" />
+                  <span className="text-[#5F6875]">Dosing Cycle:</span>
+                  <strong className="text-[#18202A] font-mono">0.82s (+22%)</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#E56B00]" />
+                  <span className="text-[#5F6875]">Manifold Pressure:</span>
+                  <strong className="text-[#18202A] font-mono">2.45 bar (-21%)</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#E56B00]" />
+                  <span className="text-[#5F6875]">Raw Milk Lot:</span>
+                  <strong className="text-[#18202A] font-mono">#904 (+8.4% cP)</strong>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20]" />
-                <span className="text-[#5F6875]">Dosing Cycle:</span>
-                <strong className="text-[#18202A] font-mono">0.82s (+22%)</strong>
+            ) : (
+              <div className="mt-3 pt-3 border-t border-[#D9E4FF] grid grid-cols-2 gap-2 text-[12px]">
+                {investigation.evidence.slice(0, 4).map((ev) => (
+                  <div key={ev.id} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#2F5BFF]" />
+                    <span className="text-[#5F6875] truncate">{ev.metric || ev.title}:</span>
+                    <strong className="text-[#18202A] font-mono shrink-0">{ev.delta}</strong>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#E56B00]" />
-                <span className="text-[#5F6875]">Manifold Pressure:</span>
-                <strong className="text-[#18202A] font-mono">2.45 bar (-21%)</strong>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#E56B00]" />
-                <span className="text-[#5F6875]">Raw Milk Lot:</span>
-                <strong className="text-[#18202A] font-mono">#904 (+8.4% cP)</strong>
-              </div>
-            </div>
+            )}
 
-            <div className="mt-3 pt-2 text-[12px] text-[#2F5BFF] flex items-center justify-between">
-              <button
-                onClick={handleOpenFullWorkbench}
-                className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-              >
-                <span>+ View 2 secondary factors in Full Workbench</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            {investigation.rootCauses.length > 1 && (
+              <div className="mt-3 pt-2 text-[12px] text-[#2F5BFF] flex items-center justify-between">
+                <button
+                  onClick={handleOpenFullWorkbench}
+                  className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                >
+                  <span>+ View {investigation.rootCauses.length - 1} secondary factor{investigation.rootCauses.length - 1 > 1 ? 's' : ''} in Full Workbench</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* D. Single Primary Action Recommendation (Zero Decision Paralysis) */}
@@ -318,11 +375,19 @@ export function InvestigationDrawer() {
               <div className="flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-[#2F5BFF]" />
                 <span className="text-[13px] font-bold text-[#18202A]">
-                  Recommended Maintenance SOP
+                  Recommended {primaryRec.owner} Action
                 </span>
               </div>
-              <span className="text-[11px] font-semibold text-[#D92D20] bg-[#FEF3F2] px-2 py-0.5 rounded border border-[#FECDCA]">
-                Critical Priority
+              <span
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${
+                  primaryRec.priority === 'Critical'
+                    ? 'text-[#D92D20] bg-[#FEF3F2] border-[#FECDCA]'
+                    : primaryRec.priority === 'High'
+                    ? 'text-[#E56B00] bg-[#FFF6ED] border-[#FEDF89]'
+                    : 'text-[#5F6875] bg-[#F2F4F7] border-[#E4E7EB]'
+                }`}
+              >
+                {primaryRec.priority} Priority
               </span>
             </div>
 
@@ -336,7 +401,7 @@ export function InvestigationDrawer() {
             <div className="mt-3 pt-3 border-t border-[#E4E7EB] flex items-center justify-between gap-3">
               <div className="text-[12px] text-[#18864B] font-semibold flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Target: Recover +1,000 bottles/hr</span>
+                <span>Target: {primaryRec.expectedImpact}</span>
               </div>
 
               {!isResolved && !linkedTask && (
@@ -353,7 +418,7 @@ export function InvestigationDrawer() {
               {linkedTask && !isResolved && (
                 <span className="h-8 px-3 text-[12px] font-medium text-[#18864B] bg-[#EDFDF2] border border-[#A6F4C5] rounded-lg flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5" />
-                  <span>Dispatched to Carlos Ruiz</span>
+                  <span>Dispatched to {linkedTask.assignedTo}</span>
                 </span>
               )}
 

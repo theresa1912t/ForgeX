@@ -93,9 +93,10 @@ export function InvestigationsModule() {
   }
 
   const isResolved = currentInv.status === 'Resolved';
+  const isHero = currentInv.id === HERO_INVESTIGATION_ID;
   const { businessImpact } = currentInv;
   const linkedTask = actionTasks.find(
-    (t) => t.investigationId === currentInv.id || t.alertId === 'alt-line3-loss'
+    (t) => t.investigationId === currentInv.id || t.alertId === currentInv.alertId
   );
 
   const primaryRec = currentInv.recommendations?.[0];
@@ -178,7 +179,7 @@ export function InvestigationsModule() {
                 ) : (
                   <>
                     <AlertTriangle className="w-3.5 h-3.5 mr-1" />
-                    Active Bottleneck
+                    Active Investigation
                   </>
                 )}
               </span>
@@ -233,19 +234,32 @@ export function InvestigationsModule() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => {
-                    completeTaskWithOutcome(
-                      linkedTask.id,
-                      'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
-                      'Completed replacement under +0.2 bar backpressure test. Output normalized.',
-                      1000
-                    );
-                    showToast('Maintenance marked complete. Line 3 speed restored to 5,380 bottles/hr!', 'success');
+                    if (isHero) {
+                      completeTaskWithOutcome(
+                        linkedTask.id,
+                        'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
+                        'Completed replacement under +0.2 bar backpressure test. Output normalized.',
+                        1000
+                      );
+                    } else {
+                      completeTaskWithOutcome(
+                        linkedTask.id,
+                        `${linkedTask.title} completed.`,
+                        linkedTask.description,
+                      );
+                    }
                   }}
                   disabled={isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)}
                   className="h-10 px-4 text-[13px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>{isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`) ? 'Completing...' : 'Complete Maintenance & Restore Speed'}</span>
+                  <span>
+                    {isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)
+                      ? 'Completing...'
+                      : isHero
+                      ? 'Complete Maintenance & Restore Speed'
+                      : 'Mark Task Complete'}
+                  </span>
                 </button>
                 <button
                   onClick={() => setActiveTab('actions')}
@@ -262,7 +276,7 @@ export function InvestigationsModule() {
                   className="h-11 px-5 text-[14px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-xl transition-all flex items-center gap-2 shadow-md cursor-pointer"
                 >
                   <ClipboardList className="w-4 h-4" />
-                  <span>Dispatch Work Order to Carlos Ruiz</span>
+                  <span>Dispatch Work Order</span>
                 </button>
               )
             )}
@@ -312,7 +326,7 @@ export function InvestigationsModule() {
 
           <div className="p-4 bg-[#F8FAFC] border border-[#E4E7EB] rounded-xl">
             <div className="text-[12px] font-semibold text-[#5F6875] flex items-center justify-between">
-              <span>Checkweigher Rejects</span>
+              <span>Material Waste</span>
               <Flame className="w-4 h-4 text-[#D92D20]" />
             </div>
             <div className="text-[24px] font-bold text-[#18202A] mt-1 font-mono">
@@ -371,7 +385,7 @@ export function InvestigationsModule() {
               detail specific to the seeded hero scenario (no generic equivalent fields exist on
               Investigation for an AI-generated case), so it only renders for that one case. The
               Ranked Root Causes list below is real and investigation-specific for every case. */}
-          {currentInv.id === HERO_INVESTIGATION_ID && (
+          {isHero && (
           <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E4E7EB]">
               <div>
@@ -606,7 +620,7 @@ export function InvestigationsModule() {
                       {isApproved || isTaskCreated ? (
                         <span className="h-9 px-3.5 rounded-lg text-[13px] font-semibold bg-[#EDFDF2] text-[#18864B] border border-[#A6F4C5] inline-flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4 text-[#18864B]" />
-                          <span>Dispatched to Maintenance</span>
+                          <span>Dispatched to {rec.owner}</span>
                         </span>
                       ) : (
                         <>
@@ -713,7 +727,7 @@ export function InvestigationsModule() {
                 <span>Incident Chronology & Sequence of Events</span>
               </h3>
               <p className="text-[13px] text-[#5F6875] mt-0.5">
-                Exact sequence of automated PLC flags, vibration spikes, and checkweigher tare weight rejects.
+                Exact sequence of recorded events and telemetry correlated to this investigation.
               </p>
             </div>
 
@@ -754,7 +768,7 @@ export function InvestigationsModule() {
                 <span>Quantified Financial Loss & Floor Scrap Accounting</span>
               </h3>
               <p className="text-[13px] text-[#5F6875] mt-0.5">
-                Translating equipment cycle throttling and tare weight rejects into direct P&amp;L impact.
+                Translating this investigation&apos;s operational losses into direct P&amp;L impact.
               </p>
             </div>
 
@@ -772,7 +786,7 @@ export function InvestigationsModule() {
                 <div className="text-[24px] font-bold text-[#D92D20] mt-1 font-mono">
                   {formatCurrency(businessImpact.estimatedRevenueLoss)}
                 </div>
-                <div className="text-[11px] text-[#5F6875] mt-0.5">at $1.65 / finished bottle</div>
+                <div className="text-[11px] text-[#5F6875] mt-0.5">at {currentInv.productName || 'this product'}&apos;s unit revenue</div>
               </div>
 
               <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB]">
@@ -788,7 +802,7 @@ export function InvestigationsModule() {
                 <div className="text-[24px] font-bold text-[#D92D20] mt-1 font-mono">
                   ${businessImpact.materialWasteCost}
                 </div>
-                <div className="text-[11px] text-[#5F6875] mt-0.5">{businessImpact.materialWasteKg} kg Raw Milk (#904)</div>
+                <div className="text-[11px] text-[#5F6875] mt-0.5">{businessImpact.materialWasteKg} kg scrap material</div>
               </div>
 
               <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB]">
@@ -832,7 +846,7 @@ export function InvestigationsModule() {
         <div className="fixed inset-0 z-50 bg-[#18202A]/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-[#E4E7EB] w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-[#E4E7EB] flex items-center justify-between">
-              <h3 className="text-[17px] font-bold text-[#18202A]">Dispatch Maintenance Work Order</h3>
+              <h3 className="text-[17px] font-bold text-[#18202A]">Dispatch Work Order</h3>
               <button
                 onClick={() => setSelectedActionModalRec(null)}
                 className="text-[#8A93A0] hover:text-[#18202A] p-1 cursor-pointer"
