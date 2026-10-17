@@ -28,6 +28,7 @@ export function DashboardModule() {
     productionLines,
     machines,
     alerts,
+    products,
     setActiveTab,
     setSelectedInvestigationId,
     setSelectedAlertId,
@@ -51,7 +52,15 @@ export function DashboardModule() {
   const totalLostUnits = Math.round(
     productionLines.reduce((acc, l) => acc + l.productionLossUnits, 0) * filterMultiplier
   );
-  const estimatedRevenueLoss = totalLostUnits * 1.25;
+  // Each line's own current product's real unitRevenue — not a single blanket rate across every
+  // line/product (need-checking.md §8: "clearly display assumptions"; a line with no resolvable
+  // product contributes $0, never a guessed rate).
+  const unitRevenueByProductName = new Map(products.map((p) => [p.name, p.unitRevenue]));
+  const estimatedRevenueLoss =
+    productionLines.reduce(
+      (acc, l) => acc + l.productionLossUnits * (unitRevenueByProductName.get(l.currentProduct) ?? 0),
+      0,
+    ) * filterMultiplier;
 
   const avgDefectRate = (
     productionLines.reduce((acc, l) => acc + l.defectRatePct, 0) / productionLines.length

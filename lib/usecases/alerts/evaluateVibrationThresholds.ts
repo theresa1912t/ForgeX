@@ -4,6 +4,7 @@ import * as notificationRepository from '@/lib/repositories/notificationReposito
 import * as machineRepository from '@/lib/repositories/machineRepository';
 import * as productionLineRepository from '@/lib/repositories/productionLineRepository';
 import * as thresholdsRepository from '@/lib/repositories/thresholdsRepository';
+import * as incidentEventRepository from '@/lib/repositories/incidentEventRepository';
 
 const VIBRATION_METRIC_KEY = 'vibrationMmS';
 
@@ -41,7 +42,7 @@ export async function evaluateVibrationThresholds() {
       continue;
     }
 
-    await alertRepository.create({
+    const alert = await alertRepository.create({
       title: `${machine.name} vibration exceeds threshold (${latest.value.toFixed(2)} mm/s > ${thresholds.vibrationAnomalyMmS} mm/s)`,
       severity: 'High',
       category: 'Machine',
@@ -57,6 +58,13 @@ export async function evaluateVibrationThresholds() {
       revenueAtRisk: 0,
       confidence: 75,
       status: 'New',
+    });
+
+    await incidentEventRepository.create({
+      alertId: alert.id,
+      eventType: 'Created',
+      toStatus: 'New',
+      message: `Alert auto-created from live telemetry: vibration ${latest.value.toFixed(2)} mm/s exceeded the ${thresholds.vibrationAnomalyMmS} mm/s threshold.`,
     });
 
     await notificationRepository.create({

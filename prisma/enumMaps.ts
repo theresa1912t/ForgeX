@@ -29,6 +29,7 @@ export const alertStatusMap: Record<string, $Enums.AlertStatus> = {
   'In Progress': 'InProgress',
   'Resolved': 'Resolved',
   'Dismissed': 'Dismissed',
+  'Reopened': 'Reopened',
 };
 export const alertStatusReverseMap = reverse(alertStatusMap);
 

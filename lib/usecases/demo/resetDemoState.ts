@@ -12,6 +12,7 @@ import * as deviceConnectionRepository from '@/lib/repositories/deviceConnection
 import * as machineConnectivityProfileRepository from '@/lib/repositories/machineConnectivityProfileRepository';
 import * as wasteRecordRepository from '@/lib/repositories/wasteRecordRepository';
 import * as ingredientUsageRecordRepository from '@/lib/repositories/ingredientUsageRecordRepository';
+import * as incidentEventRepository from '@/lib/repositories/incidentEventRepository';
 import {
   buildAlertRows,
   buildHeroInvestigationParts,
@@ -40,6 +41,7 @@ export async function resetDemoState() {
     await recommendedActionRepository.deleteAll(tx);
     await investigationRepository.deleteAllChildren(tx);
     await investigationRepository.deleteAll(tx);
+    await incidentEventRepository.deleteAll(tx);
     await alertRepository.deleteAll(tx);
     await machineConnectivityProfileRepository.deleteAll(tx);
     await deviceConnectionRepository.deleteAll(tx);

@@ -14,7 +14,12 @@ import {
   Layers,
   ArrowRight,
   Activity,
+  ClipboardList,
+  RotateCcw,
+  FlaskConical,
 } from 'lucide-react';
+import { ReportIssueModal } from '@/components/ReportIssueModal';
+import { SimulateFailureModal } from '@/components/SimulateFailureModal';
 
 export function AlertsModule() {
   const {
@@ -23,6 +28,7 @@ export function AlertsModule() {
     setSelectedAlertId,
     evaluateThresholds,
     generateInvestigation,
+    reopenAlert,
     isMutationPending,
   } = useFactory();
 
@@ -30,6 +36,8 @@ export function AlertsModule() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchFilter, setSearchFilter] = useState<string>('');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false);
 
   const filteredAlerts = alerts.filter((alert) => {
     if (selectedSeverity !== 'all' && alert.severity !== selectedSeverity) return false;
@@ -74,8 +82,27 @@ export function AlertsModule() {
             <Activity className={`w-4 h-4 text-[#2F5BFF] ${isMutationPending('evaluateThresholds') ? 'animate-spin' : ''}`} />
             <span>{isMutationPending('evaluateThresholds') ? 'Checking...' : 'Run Threshold Check'}</span>
           </button>
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            title="Manually report an observed issue"
+            className="h-10 px-3.5 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span>Report Issue</span>
+          </button>
+          <button
+            onClick={() => setIsSimulateModalOpen(true)}
+            title="Trigger a demo failure scenario"
+            className="h-10 px-3.5 text-[14px] font-medium text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors flex items-center gap-2"
+          >
+            <FlaskConical className="w-4 h-4 text-[#2F5BFF]" />
+            <span>Simulate Failure</span>
+          </button>
         </div>
       </div>
+
+      <ReportIssueModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} />
+      <SimulateFailureModal isOpen={isSimulateModalOpen} onClose={() => setIsSimulateModalOpen(false)} />
 
       {/* 2. Filters Toolbar */}
       <div className="card-base flex flex-wrap items-center gap-3">
@@ -129,6 +156,7 @@ export function AlertsModule() {
           <option value="Action Required">Action Required</option>
           <option value="In Progress">In Progress</option>
           <option value="Resolved">Resolved</option>
+          <option value="Reopened">Reopened</option>
         </select>
 
         {(selectedSeverity !== 'all' || selectedCategory !== 'all' || selectedStatus !== 'all' || searchFilter) && (
@@ -222,6 +250,17 @@ export function AlertsModule() {
 
                   {/* Right Actions */}
                   <div className="flex items-center gap-3 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-[#E4E7EB]">
+                    {(alert.status === 'Resolved' || alert.status === 'Dismissed') && (
+                      <button
+                        onClick={() => reopenAlert(alert.id, '')}
+                        disabled={isMutationPending(`reopenAlert:${alert.id}`)}
+                        title="Reopen this incident if the fault has returned"
+                        className="h-10 px-3.5 text-[14px] font-medium text-[#B78103] bg-white hover:bg-[#FEF7E6] border border-[#E4E7EB] rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <RotateCcw className={`w-4 h-4 ${isMutationPending(`reopenAlert:${alert.id}`) ? 'animate-spin' : ''}`} />
+                        <span>{isMutationPending(`reopenAlert:${alert.id}`) ? 'Reopening...' : 'Reopen'}</span>
+                      </button>
+                    )}
                     {alert.investigationId ? (
                       <button
                         onClick={() => {

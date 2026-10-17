@@ -182,6 +182,17 @@ interface FactoryContextType {
   // Returns the created investigation (or undefined on failure) so the caller can navigate into it.
   generateInvestigation: (alertId: string) => Promise<Investigation | undefined>;
 
+  // Manual incident registration + reopen (need-checking.md Journeys A and lifecycle §5).
+  reportIssue: (input: {
+    machineId: string;
+    category: Alert['category'];
+    severity: Alert['severity'];
+    title: string;
+    description: string;
+  }) => Promise<Alert | undefined>;
+  reopenAlert: (alertId: string, reason: string) => void;
+  simulateFailure: (machineId: string, scenario: string) => void;
+
   // True while a mutation keyed by `key` is in flight — see lib/mutations.ts's withPending.
   // Buttons use this to show a loading/disabled state and avoid double-firing on a slow network.
   isMutationPending: (key: string) => boolean;
@@ -468,6 +479,9 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         resetDemoToHeroState,
         evaluateThresholds: mutations.evaluateThresholds,
         generateInvestigation: mutations.generateInvestigation,
+        reportIssue: mutations.reportIssue,
+        reopenAlert: mutations.reopenAlert,
+        simulateFailure: mutations.simulateFailure,
         isMutationPending: mutations.isPending,
       }}
     >

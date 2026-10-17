@@ -22,6 +22,7 @@ import {
   buildQualityRecordRows,
   buildDeviceConnectionRows,
   buildMachineConnectivityProfileInputs,
+  buildProductionMetricRows,
 } from './seedData';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -41,6 +42,9 @@ async function main() {
   console.log('Seeding production lines and machines...');
   await prisma.productionLine.createMany({ data: buildProductionLineRows() });
   await prisma.machine.createMany({ data: buildMachineRows() });
+
+  console.log('Seeding production metrics history...');
+  await prisma.productionMetric.createMany({ data: buildProductionMetricRows() });
 
   console.log('Seeding operational thresholds...');
   await prisma.operationalThresholds.create({ data: buildThresholdsRow('fac-main') });

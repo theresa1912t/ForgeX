@@ -109,7 +109,7 @@ export interface MaterialBatch {
 
 export type AlertSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
 export type AlertCategory = 'Production' | 'Machine' | 'Quality' | 'Material' | 'Downtime' | 'Waste' | 'Energy';
-export type AlertStatus = 'New' | 'Investigating' | 'Action Required' | 'In Progress' | 'Resolved' | 'Dismissed';
+export type AlertStatus = 'New' | 'Investigating' | 'Action Required' | 'In Progress' | 'Resolved' | 'Dismissed' | 'Reopened';
 
 export interface Alert {
   id: string;
@@ -198,7 +198,7 @@ export interface Investigation {
   startTime: string;
   duration: string;
   outputVariancePct: number;
-  status: 'Active' | 'Investigating' | 'Resolved';
+  status: 'Active' | 'Investigating' | 'Resolved' | 'Reopened';
   summary: string;
   timeline: Array<{
     time: string;
@@ -226,6 +226,32 @@ export interface Investigation {
     completedBy: string;
     date: string;
   };
+}
+
+export interface IncidentEvent {
+  id: string;
+  alertId: string;
+  eventType: string;
+  actorName: string | null;
+  fromStatus: string | null;
+  toStatus: string | null;
+  message: string;
+  createdAt: string;
+}
+
+export type ProductionMetricSource = 'Seed' | 'Simulator';
+
+export interface ProductionMetric {
+  id: string;
+  machineId: string;
+  intervalStart: string;
+  intervalEnd: string;
+  expectedUnits: number;
+  actualUnits: number;
+  goodUnits: number;
+  defectiveUnits: number;
+  unitRevenue: number;
+  source: ProductionMetricSource;
 }
 
 export type ActionTaskStatus = 'Pending' | 'Assigned' | 'In Progress' | 'Completed' | 'Cancelled';

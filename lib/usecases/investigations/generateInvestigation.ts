@@ -11,6 +11,7 @@ import * as wasteRecordRepository from '@/lib/repositories/wasteRecordRepository
 import * as downtimeRecordRepository from '@/lib/repositories/downtimeRecordRepository';
 import * as investigationRepository from '@/lib/repositories/investigationRepository';
 import * as recommendedActionRepository from '@/lib/repositories/recommendedActionRepository';
+import * as incidentEventRepository from '@/lib/repositories/incidentEventRepository';
 import { rootCauseStatusMap, recommendationStatusMap } from '@/prisma/enumMaps';
 import { generateSummary } from '@/lib/server/gemini';
 import { NotFoundError, ValidationError } from '@/lib/usecases/errors';
@@ -260,6 +261,17 @@ export async function generateInvestigation(alertId: string) {
 
     await recommendedActionRepository.createMany(recommendations, tx);
     await alertRepository.updateStatus(alertId, 'Investigating', {}, tx);
+
+    await incidentEventRepository.create(
+      {
+        alertId,
+        eventType: 'InvestigationGenerated',
+        fromStatus: alert.status,
+        toStatus: 'Investigating',
+        message: `AI investigation generated from ${signals.length} evidence signal${signals.length > 1 ? 's' : ''}.`,
+      },
+      tx,
+    );
   });
 
   const created = await investigationRepository.findById(investigationId);

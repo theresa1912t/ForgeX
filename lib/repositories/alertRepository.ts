@@ -67,6 +67,20 @@ export async function findActiveByMachine(machineId: string, client: DbClient = 
   return row ? serialize(row) : null;
 }
 
+// The most recently resolved/dismissed alert for this machine — used by the "recurring fault"
+// simulation scenario (need-checking.md §9) to reopen a past incident instead of fabricating an
+// unrelated new one, when one actually exists to reopen.
+export async function findLatestResolvedByMachine(machineId: string, client: DbClient = prisma) {
+  const row = await client.alert.findFirst({
+    where: {
+      machineId,
+      status: { in: [alertStatusMap['Resolved'], alertStatusMap['Dismissed']] },
+    },
+    orderBy: { id: 'desc' },
+  });
+  return row ? serialize(row) : null;
+}
+
 export async function updateStatus(
   id: string,
   status: AlertStatus,

@@ -19,6 +19,16 @@ export async function findById(id: string, client: DbClient = prisma) {
   return row ? serialize(row) : null;
 }
 
+export async function findByAlert(alertId: string, client: DbClient = prisma) {
+  const rows = await client.actionTask.findMany({ where: { alertId }, orderBy: { id: 'asc' } });
+  return rows.map(serialize);
+}
+
+export async function findByInvestigation(investigationId: string, client: DbClient = prisma) {
+  const rows = await client.actionTask.findMany({ where: { investigationId }, orderBy: { id: 'asc' } });
+  return rows.map(serialize);
+}
+
 export async function findByInvestigationAndRecommendation(
   investigationId: string,
   recommendationId: string,
