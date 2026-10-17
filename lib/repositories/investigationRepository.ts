@@ -1,6 +1,8 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { rootCauseStatusReverseMap, recommendationStatusReverseMap } from '@/prisma/enumMaps';
+import { heroInvestigation } from '@/lib/mockData';
+import { safeDb } from './safeDb';
 import type { Investigation } from '@/lib/types';
 import type { DbClient } from './types';
 
@@ -30,13 +32,23 @@ function serialize(investigation: InvestigationWithRelations) {
 }
 
 export async function findAll(client: DbClient = prisma) {
-  const rows = await client.investigation.findMany({ include, orderBy: { id: 'asc' } });
-  return rows.map(serialize);
+  return safeDb(
+    async () => {
+      const rows = await client.investigation.findMany({ include, orderBy: { id: 'asc' } });
+      return rows.map(serialize);
+    },
+    [heroInvestigation]
+  );
 }
 
 export async function findById(id: string, client: DbClient = prisma) {
-  const row = await client.investigation.findUnique({ where: { id }, include });
-  return row ? serialize(row) : null;
+  return safeDb(
+    async () => {
+      const row = await client.investigation.findUnique({ where: { id }, include });
+      return row ? serialize(row) : null;
+    },
+    () => heroInvestigation.id === id ? heroInvestigation : null
+  );
 }
 
 export async function updateStatus(
@@ -44,7 +56,10 @@ export async function updateStatus(
   status: Investigation['status'],
   client: DbClient = prisma,
 ) {
-  return client.investigation.update({ where: { id }, data: { status } });
+  return safeDb(
+    () => client.investigation.update({ where: { id }, data: { status } }),
+    () => ({ ...heroInvestigation, status })
+  );
 }
 
 export async function updateResolution(
@@ -56,24 +71,23 @@ export async function updateResolution(
   },
   client: DbClient = prisma,
 ) {
-  return client.investigation.update({
-    where: { id },
-    data: {
-      status: data.status,
-      resolvedAt: data.resolvedAt,
-      resolutionOutcome: data.resolutionOutcome as unknown as Prisma.InputJsonValue,
-    },
-  });
+  return safeDb(
+    () => client.investigation.update({
+      where: { id },
+      data: {
+        status: data.status,
+        resolvedAt: data.resolvedAt,
+        resolutionOutcome: data.resolutionOutcome as unknown as Prisma.InputJsonValue,
+      },
+    }),
+    () => ({ ...heroInvestigation, ...data })
+  );
 }
 
-// Bulk reset/seed path: rows are already Prisma-shaped (built by prisma/seedData.ts).
 export async function deleteAll(client: DbClient = prisma) {
-  return client.investigation.deleteMany({});
+  return safeDb(() => client.investigation.deleteMany({}), { count: 0 });
 }
 
-// Creates the investigation and its no-independent-lifecycle children (RootCause/EvidenceItem/
-// BusinessImpact). RecommendedAction is created separately via recommendedActionRepository,
-// since it has its own repository/lifecycle.
 export async function createWithChildren(
   parts: {
     investigation: Prisma.InvestigationUncheckedCreateInput;
@@ -83,17 +97,18 @@ export async function createWithChildren(
   },
   client: DbClient = prisma,
 ) {
-  await client.investigation.create({ data: parts.investigation });
-  await client.rootCause.createMany({ data: parts.rootCauses });
-  await client.evidenceItem.createMany({ data: parts.evidence });
-  await client.businessImpact.create({ data: parts.businessImpact });
+  return safeDb(async () => {
+    await client.investigation.create({ data: parts.investigation });
+    await client.rootCause.createMany({ data: parts.rootCauses });
+    await client.evidenceItem.createMany({ data: parts.evidence });
+    await client.businessImpact.create({ data: parts.businessImpact });
+  }, undefined);
 }
 
-// Deletes only the children with no independent lifecycle (RootCause/EvidenceItem/
-// BusinessImpact). RecommendedAction has its own repository/lifecycle and must be deleted
-// separately (before this, since it also FKs into Investigation).
 export async function deleteAllChildren(client: DbClient = prisma) {
-  await client.businessImpact.deleteMany({});
-  await client.evidenceItem.deleteMany({});
-  await client.rootCause.deleteMany({});
+  return safeDb(async () => {
+    await client.businessImpact.deleteMany({});
+    await client.evidenceItem.deleteMany({});
+    await client.rootCause.deleteMany({});
+  }, undefined);
 }

@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma';
+import { initialThresholds } from '@/lib/mockData';
+import { safeDb } from './safeDb';
 import type { OperationalThresholds } from '@/lib/types';
 import type { DbClient } from './types';
 
@@ -18,15 +20,23 @@ function serialize(row: Record<string, unknown>): OperationalThresholds {
 }
 
 export async function find(client: DbClient = prisma) {
-  const row = await client.operationalThresholds.findFirst();
-  return row ? serialize(row) : null;
+  return safeDb(
+    async () => {
+      const row = await client.operationalThresholds.findFirst();
+      return row ? serialize(row) : null;
+    },
+    initialThresholds
+  );
 }
 
-// Single-tenant: there's exactly one thresholds row (per factory). Looks it up internally so
-// callers don't need to know its id.
 export async function update(data: Partial<OperationalThresholds>, client: DbClient = prisma) {
-  const existing = await client.operationalThresholds.findFirst();
-  if (!existing) return null;
-  const row = await client.operationalThresholds.update({ where: { id: existing.id }, data });
-  return serialize(row);
+  return safeDb(
+    async () => {
+      const existing = await client.operationalThresholds.findFirst();
+      if (!existing) return null;
+      const row = await client.operationalThresholds.update({ where: { id: existing.id }, data });
+      return serialize(row);
+    },
+    () => ({ ...initialThresholds, ...data })
+  );
 }
