@@ -260,7 +260,7 @@ export interface ActionTask {
   id: string;
   title: string;
   description: string;
-  investigationId: string;
+  investigationId?: string;
   alertId: string;
   recommendationId?: string;
   lineName: string;

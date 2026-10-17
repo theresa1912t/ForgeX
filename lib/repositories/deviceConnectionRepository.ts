@@ -7,7 +7,9 @@ import { safeDb } from './safeDb';
 import type { DeviceConnection } from '@/lib/types';
 import type { DbClient } from './types';
 
-function serialize<T extends { protocol: $Enums.ProtocolType }>(row: T) {
+function serialize<T extends { protocol: $Enums.ProtocolType }>(
+  row: T,
+): Omit<T, 'protocol'> & { protocol: DeviceConnection['protocol'] } {
   return { ...row, protocol: protocolReverseMap[row.protocol] };
 }
 
@@ -57,20 +59,20 @@ export async function create(data: Omit<DeviceConnection, 'id'>, client: DbClien
 
 export async function updateTestResult(
   id: string,
-  result: { status: 'connected' | 'error'; lastHeartbeat: string; pingLatencyMs: number },
+  data: { status: DeviceConnection['status']; pingLatencyMs: number; lastHeartbeat: string },
   client: DbClient = prisma,
 ) {
   return safeDb(
     async () => {
       const row = await client.deviceConnection.update({
         where: { id },
-        data: result,
+        data,
       });
       return serialize(row);
     },
     () => {
       const existing = initialDeviceConnections.find((c) => c.id === id) || initialDeviceConnections[0];
-      return { ...existing, ...result };
+      return { ...existing, ...data };
     }
   );
 }

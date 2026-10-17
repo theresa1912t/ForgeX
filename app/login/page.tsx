@@ -56,7 +56,7 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.href = '/';
+      window.location.assign('/');
     } catch {
       setIsSubmitting(false);
       setError('Connection error. Please try the 1-click persona sign-in below.');

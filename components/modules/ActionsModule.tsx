@@ -279,7 +279,7 @@ export function ActionsModule() {
                           <span>·</span>
                           <button
                             onClick={() => {
-                              openInvestigation(task.investigationId, 'actions');
+                              openInvestigation(task.investigationId!, 'actions');
                             }}
                             className="text-[#2F5BFF] hover:underline font-medium flex items-center gap-1"
                           >

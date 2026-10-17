@@ -7,15 +7,72 @@ import { safeDb } from './safeDb';
 import type { Alert, AlertStatus } from '@/lib/types';
 import type { DbClient } from './types';
 
-function serialize<T extends { status: $Enums.AlertStatus }>(row: T) {
-  return { ...row, status: alertStatusReverseMap[row.status] };
+// Explicit return type: the inferred one doesn't reflect the enum->display-string remap this
+// actually does at runtime (a pre-existing repository-layer typing gap), which otherwise makes
+// TypeScript reject passing an app-level-typed fallback (e.g. mock data) alongside this result.
+function serialize<
+  T extends {
+    status: $Enums.AlertStatus;
+    machineId: string | null;
+    machineName: string | null;
+    productId: string | null;
+    productName: string | null;
+    resolvedAt: string | null;
+  },
+>(
+  row: T,
+): Omit<T, 'status' | 'machineId' | 'machineName' | 'productId' | 'productName' | 'resolvedAt'> & {
+  status: AlertStatus;
+  machineId?: Alert['machineId'];
+  machineName?: Alert['machineName'];
+  productId?: Alert['productId'];
+  productName?: Alert['productName'];
+  resolvedAt?: Alert['resolvedAt'];
+} {
+  const { status, machineId, machineName, productId, productName, resolvedAt, ...rest } = row;
+  return {
+    ...rest,
+    status: alertStatusReverseMap[status],
+    machineId: machineId ?? undefined,
+    machineName: machineName ?? undefined,
+    productId: productId ?? undefined,
+    productName: productName ?? undefined,
+    resolvedAt: resolvedAt ?? undefined,
+  };
 }
 
 function serializeWithInvestigation<
-  T extends { status: $Enums.AlertStatus; investigation: { id: string } | null },
->(row: T) {
-  const { investigation, ...rest } = row;
-  return { ...serialize(rest), investigationId: investigation?.id };
+  T extends {
+    status: $Enums.AlertStatus;
+    machineId: string | null;
+    machineName: string | null;
+    productId: string | null;
+    productName: string | null;
+    resolvedAt: string | null;
+    investigation: { id: string } | null;
+  },
+>(
+  row: T,
+): Omit<T, 'status' | 'machineId' | 'machineName' | 'productId' | 'productName' | 'resolvedAt' | 'investigation'> & {
+  status: AlertStatus;
+  machineId?: Alert['machineId'];
+  machineName?: Alert['machineName'];
+  productId?: Alert['productId'];
+  productName?: Alert['productName'];
+  resolvedAt?: Alert['resolvedAt'];
+  investigationId?: string;
+} {
+  const { status, machineId, machineName, productId, productName, resolvedAt, investigation, ...rest } = row;
+  return {
+    ...rest,
+    status: alertStatusReverseMap[status],
+    machineId: machineId ?? undefined,
+    machineName: machineName ?? undefined,
+    productId: productId ?? undefined,
+    productName: productName ?? undefined,
+    resolvedAt: resolvedAt ?? undefined,
+    investigationId: investigation?.id,
+  };
 }
 
 const WITH_INVESTIGATION = { investigation: { select: { id: true } } } as const;
@@ -82,7 +139,10 @@ export async function findActiveByMachine(machineId: string, client: DbClient = 
       });
       return row ? serialize(row) : null;
     },
-    () => initialAlerts.find((a) => a.machineId === machineId && a.status === 'Active') || null
+    () =>
+      initialAlerts.find(
+        (a) => a.machineId === machineId && a.status !== 'Resolved' && a.status !== 'Dismissed',
+      ) || null
   );
 }
 
