@@ -17,6 +17,7 @@ import {
   X,
   SlidersHorizontal,
   ArrowUpRight,
+  ArrowRight,
   TrendingDown,
   ShieldCheck,
   ShieldAlert,
@@ -455,12 +456,12 @@ export function MaterialsModule() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => openInvestigationDrawer('inv-line3-hero')}
-                  className="h-8 px-3 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-md flex items-center gap-1.5 transition-colors"
+                  onClick={() => openInvestigation('inv-line3-hero', 'materials')}
+                  className="h-8 px-3 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Inspect in Drawer</span>
-                  <PanelRightOpen className="w-3.5 h-3.5 ml-0.5" />
+                  <span>Diagnose Line 3 Anomaly</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
                 </button>
               </div>
             </div>

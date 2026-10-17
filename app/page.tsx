@@ -7,7 +7,6 @@ import { FactoryProvider, useFactory } from '@/lib/factoryStore';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { NotificationDrawer } from '@/components/NotificationDrawer';
-import { InvestigationDrawer } from '@/components/InvestigationDrawer';
 import { DataIngestionModal } from '@/components/DataIngestionModal';
 import { CheckCircle2, Sparkles, AlertTriangle, X } from 'lucide-react';
 
@@ -117,9 +116,6 @@ function AppContent() {
           </div>
         </main>
       </div>
-
-      {/* Slide-over Right Investigation Drawer */}
-      <InvestigationDrawer />
 
       {/* In-App Notifications Drawer */}
       <NotificationDrawer

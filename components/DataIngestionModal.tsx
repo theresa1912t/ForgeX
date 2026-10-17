@@ -7,10 +7,8 @@ import {
   UploadCloud,
   FileSpreadsheet,
   Check,
-  AlertCircle,
   ArrowRight,
   Database,
-  Cpu,
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
@@ -29,7 +27,7 @@ export function DataIngestionModal({ isOpen, onClose }: DataIngestionModalProps)
   const [selectedDataset, setSelectedDataset] = useState('production.csv');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const [mappings, setMappings] = useState<Record<string, string>>({
+  const [mappings] = useState<Record<string, string>>({
     actual_qty: 'actualOutput',
     line_code: 'lineId',
     shift_code: 'shift',
@@ -69,7 +67,7 @@ export function DataIngestionModal({ isOpen, onClose }: DataIngestionModalProps)
         opt?.records || 1440,
         'Anomaly analysis: Line 3 M-03 vibration anomaly (+38%) confirmed in new telemetry window.'
       );
-    }, 1200);
+    }, 1000);
   };
 
   const handleReset = () => {
@@ -78,83 +76,81 @@ export function DataIngestionModal({ isOpen, onClose }: DataIngestionModalProps)
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#18202A]/40 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl border border-[#E4E7EB] w-full max-w-2xl overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-[#E4E7EB] flex items-center justify-between">
+    <div className="fixed inset-0 z-50 bg-[#18202A]/50 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-[#E4E7EB] w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        
+        {/* Header (Shrink-0) */}
+        <div className="px-6 py-3.5 border-b border-[#E4E7EB] flex items-center justify-between shrink-0 bg-white">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#EEF3FF] text-[#2F5BFF] flex items-center justify-center shrink-0">
               <UploadCloud className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-[18px] font-semibold text-[#18202A]">Operational Data Ingestion</h3>
-              <p className="text-[13px] text-[#5F6875]">Import CSV datasets, map columns, and run AI correlation</p>
+              <h3 className="text-[16px] font-bold text-[#18202A]">Operational Data Ingestion</h3>
+              <p className="text-[12px] text-[#5F6875]">Import plant telemetry datasets into live historian</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[#8A93A0] hover:text-[#18202A] rounded-md"
+            className="p-1.5 text-[#8A93A0] hover:text-[#18202A] rounded-md transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Stepper Progress */}
-        <div className="px-6 py-3 bg-[#F7F8FA] border-b border-[#E4E7EB] flex items-center justify-between text-[13px] font-medium text-[#5F6875]">
-          <div className={`flex items-center gap-2 ${currentStep === 'select' ? 'text-[#2F5BFF]' : ''}`}>
-            <span className="w-6 h-6 rounded-full bg-white border border-[#E4E7EB] flex items-center justify-center text-[13px]">1</span>
+        {/* Stepper Progress (Shrink-0) */}
+        <div className="px-6 py-2.5 bg-[#F8FAFC] border-b border-[#E4E7EB] flex items-center justify-between text-[12px] font-semibold text-[#5F6875] shrink-0">
+          <div className={`flex items-center gap-1.5 ${currentStep === 'select' ? 'text-[#2F5BFF]' : ''}`}>
+            <span className="w-5 h-5 rounded-full bg-white border border-[#E4E7EB] flex items-center justify-center text-[11px] font-bold">1</span>
             Select Dataset
           </div>
-          <ArrowRight className="w-3.5 h-3.5 text-[#8A93A0]" />
-          <div className={`flex items-center gap-2 ${currentStep === 'mapping' ? 'text-[#2F5BFF]' : ''}`}>
-            <span className="w-6 h-6 rounded-full bg-white border border-[#E4E7EB] flex items-center justify-center text-[13px]">2</span>
-            Map Columns
+          <ArrowRight className="w-3 h-3 text-[#8A93A0]" />
+          <div className={`flex items-center gap-1.5 ${currentStep === 'mapping' ? 'text-[#2F5BFF]' : ''}`}>
+            <span className="w-5 h-5 rounded-full bg-white border border-[#E4E7EB] flex items-center justify-center text-[11px] font-bold">2</span>
+            Map Fields
           </div>
-          <ArrowRight className="w-3.5 h-3.5 text-[#8A93A0]" />
-          <div className={`flex items-center gap-2 ${currentStep === 'validation' ? 'text-[#2F5BFF]' : ''}`}>
-            <span className="w-6 h-6 rounded-full bg-white border border-[#E4E7EB] flex items-center justify-center text-[13px]">3</span>
-            Validate & Preview
+          <ArrowRight className="w-3 h-3 text-[#8A93A0]" />
+          <div className={`flex items-center gap-1.5 ${currentStep === 'validation' ? 'text-[#2F5BFF]' : ''}`}>
+            <span className="w-5 h-5 rounded-full bg-white border border-[#E4E7EB] flex items-center justify-center text-[11px] font-bold">3</span>
+            Validate
           </div>
-          <ArrowRight className="w-3.5 h-3.5 text-[#8A93A0]" />
-          <div className={`flex items-center gap-2 ${currentStep === 'complete' ? 'text-[#18864B]' : ''}`}>
-            <span className="w-6 h-6 rounded-full bg-white border border-[#E4E7EB] flex items-center justify-center text-[13px]">4</span>
-            Completed
+          <ArrowRight className="w-3 h-3 text-[#8A93A0]" />
+          <div className={`flex items-center gap-1.5 ${currentStep === 'complete' ? 'text-[#18864B]' : ''}`}>
+            <span className="w-5 h-5 rounded-full bg-white border border-[#E4E7EB] flex items-center justify-center text-[11px] font-bold">4</span>
+            Done
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6">
+        {/* Scrollable Content Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {currentStep === 'select' && (
             <div className="space-y-4">
-              <div className="border-2 border-dashed border-[#E4E7EB] hover:border-[#2F5BFF] rounded-xl p-8 text-center bg-[#F7F8FA] transition-colors cursor-pointer">
-                <FileSpreadsheet className="w-10 h-10 text-[#8A93A0] mx-auto mb-3" />
-                <p className="text-[15px] font-semibold text-[#18202A]">Drag & drop factory CSV export here</p>
-                <p className="text-[13px] text-[#5F6875] mt-1">Supports SCADA historians, MES run records, and QA inspection files</p>
-                <button className="mt-4 h-10 px-4 text-[14px] font-medium text-[#18202A] bg-white border border-[#E4E7EB] rounded-lg shadow-sm hover:bg-[#F7F8FA]">
-                  Browse Files
-                </button>
+              <div className="border border-dashed border-[#D0D5DD] hover:border-[#2F5BFF] rounded-xl p-4 text-center bg-[#F8FAFC] transition-colors cursor-pointer">
+                <FileSpreadsheet className="w-7 h-7 text-[#8A93A0] mx-auto mb-1.5" />
+                <p className="text-[13px] font-bold text-[#18202A]">Drag & drop factory CSV export here</p>
+                <p className="text-[12px] text-[#5F6875]">Supports SCADA historians, MES run records, and QA inspection logs</p>
               </div>
 
               <div>
-                <label className="block text-[14px] font-semibold text-[#18202A] mb-3">
-                  Or select a standard plant dataset template:
+                <label className="block text-[12px] font-bold uppercase tracking-wider text-[#5F6875] mb-2">
+                  Select A Plant Dataset Template:
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
                   {datasetOptions.map((opt) => (
                     <div
                       key={opt.id}
                       onClick={() => setSelectedDataset(opt.id)}
-                      className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
                         selectedDataset === opt.id
-                          ? 'border-[#2F5BFF] bg-[#EEF3FF] shadow-sm'
+                          ? 'border-[#2F5BFF] bg-[#EEF3FF] shadow-xs'
                           : 'border-[#E4E7EB] hover:border-[#D0D5DD] bg-white'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[14px] font-semibold text-[#18202A]">{opt.id}</span>
-                        <span className="text-[13px] text-[#5F6875]">{opt.records} rows</span>
+                        <span className="text-[13px] font-bold text-[#18202A]">{opt.id}</span>
+                        <span className="text-[11px] font-semibold text-[#5F6875] font-mono">{opt.records} rows</span>
                       </div>
-                      <p className="text-[13px] text-[#5F6875] mt-1 line-clamp-1">{opt.desc}</p>
+                      <p className="text-[12px] text-[#5F6875] mt-0.5 line-clamp-1">{opt.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -163,34 +159,22 @@ export function DataIngestionModal({ isOpen, onClose }: DataIngestionModalProps)
           )}
 
           {currentStep === 'mapping' && (
-            <div className="space-y-4">
-              <div className="p-4 bg-[#F8FAFF] border border-[#D9E4FF] rounded-xl text-[14px] text-[#18202A] flex items-center gap-3">
+            <div className="space-y-3">
+              <div className="p-3 bg-[#EEF3FF] border border-[#D9E4FF] rounded-xl text-[13px] text-[#18202A] flex items-center gap-2.5">
                 <Database className="w-4 h-4 shrink-0 text-[#2F5BFF]" />
-                <span>Auto-detected 5 columns in <strong>{selectedDataset}</strong>. Confirm mapping to FactoryLens schema:</span>
+                <span>Auto-detected 5 columns in <strong>{selectedDataset}</strong>. Confirm mapping:</span>
               </div>
 
-              <div className="space-y-2 border border-[#E4E7EB] rounded-xl p-4 bg-[#F7F8FA]">
-                <div className="grid grid-cols-2 text-[13px] font-medium text-[#5F6875] px-2 mb-2">
-                  <span>Source CSV Column</span>
+              <div className="space-y-2 border border-[#E4E7EB] rounded-xl p-3 bg-[#F8FAFC]">
+                <div className="grid grid-cols-2 text-[12px] font-bold text-[#5F6875] px-1 mb-1">
+                  <span>Source Column</span>
                   <span>Target Schema Field</span>
                 </div>
 
                 {Object.entries(mappings).map(([src, tgt]) => (
-                  <div key={src} className="grid grid-cols-2 gap-4 items-center bg-white p-3 rounded-lg border border-[#E4E7EB]">
-                    <span className="text-[14px] font-medium text-[#18202A]">{src}</span>
-                    <select
-                      value={tgt}
-                      onChange={(e) => setMappings({ ...mappings, [src]: e.target.value })}
-                      className="h-10 px-3 text-[14px] bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg text-[#18202A] focus:outline-none focus:border-[#2F5BFF]"
-                    >
-                      <option value="actualOutput">actualOutput (Units Produced)</option>
-                      <option value="targetOutput">targetOutput (Scheduled Target)</option>
-                      <option value="lineId">lineId (Production Line ID)</option>
-                      <option value="shift">shift (Shift A/B/C)</option>
-                      <option value="timestamp">timestamp (ISO 8601)</option>
-                      <option value="temperature">temperature (Celsius)</option>
-                      <option value="vibration">vibration (mm/s RMS)</option>
-                    </select>
+                  <div key={src} className="grid grid-cols-2 gap-3 items-center bg-white p-2.5 rounded-lg border border-[#E4E7EB]">
+                    <span className="text-[13px] font-mono font-medium text-[#18202A] truncate">{src}</span>
+                    <span className="text-[13px] font-mono font-semibold text-[#2F5BFF] truncate">{tgt}</span>
                   </div>
                 ))}
               </div>
@@ -198,52 +182,52 @@ export function DataIngestionModal({ isOpen, onClose }: DataIngestionModalProps)
           )}
 
           {currentStep === 'validation' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-[#EDFDF2] border border-[#A6F4C5] rounded-xl">
-                <div className="flex items-center gap-2.5">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-[#EDFDF2] border border-[#A6F4C5] rounded-xl">
+                <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[#18864B]" />
-                  <span className="text-[14px] font-semibold text-[#18864B]">Schema Validation Passed</span>
+                  <span className="text-[13px] font-bold text-[#18864B]">Schema Validation Passed</span>
                 </div>
-                <span className="text-[13px] text-[#18864B] font-medium">1,440 of 1,440 rows valid</span>
+                <span className="text-[12px] text-[#18864B] font-semibold">1,440 of 1,440 rows valid</span>
               </div>
 
               <div>
-                <div className="text-[14px] font-semibold text-[#18202A] mb-2 flex items-center justify-between">
-                  <span>Sample Record Preview (First 3 rows)</span>
-                  <span className="text-[13px] text-[#5F6875]">Schema version 2.4</span>
+                <div className="text-[13px] font-bold text-[#18202A] mb-1.5 flex items-center justify-between">
+                  <span>Record Preview (First 3 rows)</span>
+                  <span className="text-[11px] text-[#5F6875]">Schema v2.4</span>
                 </div>
-                <div className="border border-[#E4E7EB] rounded-xl overflow-x-auto text-[14px]">
+                <div className="border border-[#E4E7EB] rounded-xl overflow-x-auto text-[13px]">
                   <table className="w-full text-left">
-                    <thead className="bg-[#F7F8FA] text-[#5F6875] font-medium text-[13px] border-b border-[#E4E7EB]">
+                    <thead className="bg-[#F8FAFC] text-[#5F6875] font-semibold text-[11px] uppercase tracking-wider border-b border-[#E4E7EB]">
                       <tr>
-                        <th className="py-2.5 px-3">lineId</th>
-                        <th className="py-2.5 px-3">shift</th>
-                        <th className="py-2.5 px-3">actualOutput</th>
-                        <th className="py-2.5 px-3">targetOutput</th>
-                        <th className="py-2.5 px-3">variance</th>
+                        <th className="py-2 px-3">lineId</th>
+                        <th className="py-2 px-3">shift</th>
+                        <th className="py-2 px-3">actual</th>
+                        <th className="py-2 px-3">target</th>
+                        <th className="py-2 px-3">variance</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E4E7EB]">
+                    <tbody className="divide-y divide-[#E4E7EB] font-mono">
                       <tr>
-                        <td className="py-3 px-3">Line 3</td>
-                        <td className="py-3 px-3">Shift B</td>
-                        <td className="py-3 px-3 font-semibold text-[#D92D20]">4,300</td>
-                        <td className="py-3 px-3">5,000</td>
-                        <td className="py-3 px-3 font-semibold text-[#D92D20]">-14.0%</td>
+                        <td className="py-2 px-3">Line 3</td>
+                        <td className="py-2 px-3">Shift B</td>
+                        <td className="py-2 px-3 font-bold text-[#D92D20]">4,380</td>
+                        <td className="py-2 px-3">5,400</td>
+                        <td className="py-2 px-3 font-bold text-[#D92D20]">-18.9%</td>
                       </tr>
                       <tr>
-                        <td className="py-3 px-3">Line 1</td>
-                        <td className="py-3 px-3">Shift B</td>
-                        <td className="py-3 px-3 font-semibold text-[#18864B]">5,410</td>
-                        <td className="py-3 px-3">5,500</td>
-                        <td className="py-3 px-3 font-semibold text-[#18864B]">-1.6%</td>
+                        <td className="py-2 px-3">Line 1</td>
+                        <td className="py-2 px-3">Shift B</td>
+                        <td className="py-2 px-3 font-bold text-[#18864B]">5,880</td>
+                        <td className="py-2 px-3">6,000</td>
+                        <td className="py-2 px-3 font-bold text-[#18864B]">-2.0%</td>
                       </tr>
                       <tr>
-                        <td className="py-3 px-3">Line 2</td>
-                        <td className="py-3 px-3">Shift B</td>
-                        <td className="py-3 px-3 font-semibold text-[#E56B00]">3,820</td>
-                        <td className="py-3 px-3">4,200</td>
-                        <td className="py-3 px-3 font-semibold text-[#E56B00]">-9.1%</td>
+                        <td className="py-2 px-3">Line 2</td>
+                        <td className="py-2 px-3">Shift B</td>
+                        <td className="py-2 px-3 font-bold text-[#E56B00]">4,320</td>
+                        <td className="py-2 px-3">4,800</td>
+                        <td className="py-2 px-3 font-bold text-[#E56B00]">-10.0%</td>
                       </tr>
                     </tbody>
                   </table>
@@ -253,30 +237,30 @@ export function DataIngestionModal({ isOpen, onClose }: DataIngestionModalProps)
           )}
 
           {currentStep === 'complete' && (
-            <div className="py-8 text-center space-y-4">
-              <div className="w-12 h-12 bg-[#EDFDF2] text-[#18864B] rounded-full flex items-center justify-center mx-auto">
-                <Check className="w-6 h-6" />
+            <div className="py-4 text-center space-y-3">
+              <div className="w-10 h-10 bg-[#EDFDF2] text-[#18864B] rounded-full flex items-center justify-center mx-auto">
+                <Check className="w-5 h-5" />
               </div>
-              <h4 className="text-[22px] font-semibold text-[#18202A]">Dataset Ingested & Analyzed</h4>
-              <p className="text-[15px] leading-[24px] text-[#5F6875] max-w-md mx-auto">
+              <h4 className="text-[18px] font-bold text-[#18202A]">Dataset Ingested & Analyzed</h4>
+              <p className="text-[13px] text-[#5F6875] max-w-sm mx-auto">
                 1,440 records integrated into plant historian. The AI cross-domain engine updated anomaly detection bounds and verified Line 3 telemetry.
               </p>
-              <div className="p-4 bg-[#F8FAFF] border border-[#D9E4FF] rounded-xl text-[14px] text-[#18202A] max-w-md mx-auto text-left flex items-start gap-3">
+              <div className="p-3 bg-[#EEF3FF] border border-[#D9E4FF] rounded-xl text-[12px] text-[#18202A] max-w-sm mx-auto text-left flex items-start gap-2.5">
                 <Sparkles className="w-4 h-4 text-[#2F5BFF] shrink-0 mt-0.5" />
                 <span>
-                  <strong>AI Detection:</strong> New telemetry re-verified vibration harmonics on Filling Machine M-03 (3.31 mm/s). Recommendation #REC-1 remains high urgency.
+                  <strong>AI Detection:</strong> Re-verified vibration harmonics on Filling Machine M-03 (3.31 mm/s). Recommendation #REC-1 remains high urgency.
                 </span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-[#E4E7EB] bg-[#F7F8FA] flex items-center justify-between">
+        {/* Footer Actions (Permanently Sticky & Visible) */}
+        <div className="px-6 py-3.5 border-t border-[#E4E7EB] bg-[#F8FAFC] flex items-center justify-between shrink-0">
           {currentStep === 'complete' ? (
             <button
               onClick={handleReset}
-              className="w-full h-10 bg-[#2F5BFF] hover:bg-[#2448D8] text-white rounded-lg text-[14px] font-medium shadow-sm"
+              className="w-full h-10 bg-[#2F5BFF] hover:bg-[#2448D8] text-white rounded-xl text-[13px] font-semibold shadow-xs cursor-pointer"
             >
               Done & Return to Operations
             </button>
@@ -284,40 +268,42 @@ export function DataIngestionModal({ isOpen, onClose }: DataIngestionModalProps)
             <>
               <button
                 onClick={onClose}
-                className="h-10 px-4 text-[14px] font-medium text-[#5F6875] hover:text-[#18202A]"
+                className="h-9 px-3.5 text-[13px] font-semibold text-[#5F6875] hover:text-[#18202A] cursor-pointer"
               >
                 Cancel
               </button>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 {currentStep === 'select' && (
                   <button
                     onClick={handleStartMapping}
-                    className="h-10 px-4 bg-[#2F5BFF] hover:bg-[#2448D8] text-white font-medium rounded-lg text-[14px] shadow-sm"
+                    className="h-9 px-4 bg-[#2F5BFF] hover:bg-[#2448D8] text-white font-semibold rounded-xl text-[13px] shadow-xs cursor-pointer flex items-center gap-1.5"
                   >
-                    Proceed to Field Mapping
+                    <span>Proceed to Field Mapping</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
                 {currentStep === 'mapping' && (
                   <button
                     onClick={handleRunValidation}
-                    className="h-10 px-4 bg-[#2F5BFF] hover:bg-[#2448D8] text-white font-medium rounded-lg text-[14px] shadow-sm"
+                    className="h-9 px-4 bg-[#2F5BFF] hover:bg-[#2448D8] text-white font-semibold rounded-xl text-[13px] shadow-xs cursor-pointer flex items-center gap-1.5"
                   >
-                    Validate Dataset
+                    <span>Validate Dataset</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
                 {currentStep === 'validation' && (
                   <button
                     onClick={handleConfirmImport}
                     disabled={isProcessing}
-                    className="h-10 px-4 bg-[#2F5BFF] hover:bg-[#2448D8] text-white font-medium rounded-lg text-[14px] shadow-sm flex items-center gap-2 disabled:opacity-50"
+                    className="h-9 px-4 bg-[#2F5BFF] hover:bg-[#2448D8] text-white font-semibold rounded-xl text-[13px] shadow-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
                     {isProcessing ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        Running AI Ingestion...
+                        <span>Running AI Ingestion...</span>
                       </>
                     ) : (
-                      'Confirm Import & Run AI Anomaly Ingestion'
+                      <span>Confirm Import & Ingest</span>
                     )}
                   </button>
                 )}
@@ -325,6 +311,7 @@ export function DataIngestionModal({ isOpen, onClose }: DataIngestionModalProps)
             </>
           )}
         </div>
+
       </div>
     </div>
   );

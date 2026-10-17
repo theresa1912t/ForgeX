@@ -11,6 +11,7 @@ import {
   SearchCode,
   Layers,
   ArrowRight,
+  Sparkles,
   PanelRightOpen,
   Flame,
 } from 'lucide-react';
@@ -151,11 +152,14 @@ export function ProductionModule() {
           {selectedLine.activeAlertCount > 0 ? (
             <div className="flex flex-wrap items-center gap-2.5">
               <button
-                onClick={() => openInvestigationDrawer('inv-line3-hero')}
+                onClick={() => {
+                  setSelectedInvestigationId('inv-line3-hero');
+                  setActiveTab('investigations');
+                }}
                 className="h-10 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer"
               >
-                <PanelRightOpen className="w-4 h-4" />
-                <span>Investigate Anomaly</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Diagnose Line 3 Loss</span>
               </button>
               <button
                 onClick={() => setActiveTab('materials')}

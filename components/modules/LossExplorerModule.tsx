@@ -184,12 +184,13 @@ export function LossExplorerModule() {
                     {row.highlight ? (
                       <button
                         onClick={() => {
-                          openInvestigationDrawer('inv-line3-hero');
+                          setSelectedInvestigationId('inv-line3-hero');
+                          setActiveTab('investigations');
                         }}
-                        className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-md transition-colors shadow-sm inline-flex items-center gap-1.5"
+                        className="h-8 px-3 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
                       >
-                        <PanelRightOpen className="w-3.5 h-3.5" />
-                        <span>Investigate Loss</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Diagnose Loss</span>
                       </button>
                     ) : (
                       <button
