@@ -5,7 +5,7 @@ import type { NotificationItem } from '@/lib/types';
 import type { DbClient } from './types';
 
 export async function findAll(client: DbClient = prisma) {
-  return client.notificationItem.findMany();
+  return client.notificationItem.findMany({ orderBy: { id: 'asc' } });
 }
 
 export async function findById(id: string, client: DbClient = prisma) {

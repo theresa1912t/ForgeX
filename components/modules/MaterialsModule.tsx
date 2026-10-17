@@ -38,6 +38,7 @@ export function MaterialsModule() {
     openInvestigationDrawer,
     openInvestigation,
     investigations,
+    isMutationPending,
   } = useFactory();
 
   // Active view tab: 'inventory' | 'batches' | 'scrap'
@@ -756,9 +757,10 @@ export function MaterialsModule() {
                 </button>
                 <button
                   type="submit"
-                  className="h-9 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-sm"
+                  disabled={isMutationPending('addMaterialBatch')}
+                  className="h-9 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Receive & Update Stock
+                  {isMutationPending('addMaterialBatch') ? 'Receiving...' : 'Receive & Update Stock'}
                 </button>
               </div>
             </form>
@@ -881,9 +883,10 @@ export function MaterialsModule() {
                 </button>
                 <button
                   type="submit"
-                  className="h-9 px-4 text-[13px] font-semibold text-white bg-[#D92D20] hover:bg-[#B42318] rounded-lg transition-colors shadow-sm"
+                  disabled={isMutationPending('addWasteRecord')}
+                  className="h-9 px-4 text-[13px] font-semibold text-white bg-[#D92D20] hover:bg-[#B42318] rounded-lg transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Record Scrap Entry
+                  {isMutationPending('addWasteRecord') ? 'Recording...' : 'Record Scrap Entry'}
                 </button>
               </div>
             </form>
@@ -959,9 +962,10 @@ export function MaterialsModule() {
                 </button>
                 <button
                   type="submit"
-                  className="h-9 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-sm"
+                  disabled={isMutationPending(`adjustMaterialStock:${selectedMaterialForAdjust.id}`)}
+                  className="h-9 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Apply Adjustment
+                  {isMutationPending(`adjustMaterialStock:${selectedMaterialForAdjust.id}`) ? 'Applying...' : 'Apply Adjustment'}
                 </button>
               </div>
             </form>

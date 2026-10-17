@@ -4,7 +4,7 @@ import { ingredientStatusReverseMap } from '@/prisma/enumMaps';
 import type { DbClient } from './types';
 
 export async function findAll(client: DbClient = prisma) {
-  const rows = await client.ingredientUsageRecord.findMany();
+  const rows = await client.ingredientUsageRecord.findMany({ orderBy: { id: 'asc' } });
   return rows.map((r) => ({ ...r, status: ingredientStatusReverseMap[r.status] }));
 }
 

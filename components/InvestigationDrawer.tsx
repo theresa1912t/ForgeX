@@ -35,6 +35,7 @@ export function InvestigationDrawer() {
     actionTasks,
     setActiveTab,
     showToast,
+    isMutationPending,
   } = useFactory();
 
   if (!investigationDrawerOpen) return null;
@@ -190,10 +191,11 @@ export function InvestigationDrawer() {
                     );
                     showToast('Maintenance marked complete. Line 3 speed restored to 5,380 bottles/hr!', 'success');
                   }}
-                  className="h-8 px-3 text-[12px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  disabled={isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)}
+                  className="h-8 px-3 text-[12px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Complete Maintenance & Restore Speed</span>
+                  <span>{isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`) ? 'Completing...' : 'Complete Maintenance & Restore Speed'}</span>
                 </button>
 
                 <button
@@ -227,10 +229,15 @@ export function InvestigationDrawer() {
                     handleCreateTask(rec);
                   }
                 }}
-                className="h-8 px-3 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                disabled={Boolean(investigation.recommendations[0]) && isMutationPending(`createActionTaskFromRecommendation:${investigation.recommendations[0]?.id}`)}
+                className="h-8 px-3 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap self-start sm:self-auto disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <ClipboardList className="w-3.5 h-3.5" />
-                <span>1-Click Dispatch Order</span>
+                <span>
+                  {investigation.recommendations[0] && isMutationPending(`createActionTaskFromRecommendation:${investigation.recommendations[0].id}`)
+                    ? 'Dispatching...'
+                    : '1-Click Dispatch Order'}
+                </span>
               </button>
             </div>
           )}
@@ -430,28 +437,31 @@ export function InvestigationDrawer() {
                         ) : isApproved ? (
                           <button
                             onClick={() => handleCreateTask(rec)}
+                            disabled={isMutationPending(`createActionTaskFromRecommendation:${rec.id}`)}
                             title="Generate and dispatch an official Work Order ticket to the maintenance team"
-                            className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                            className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             <ClipboardList className="w-3.5 h-3.5" />
-                            <span>Dispatch Work Order</span>
+                            <span>{isMutationPending(`createActionTaskFromRecommendation:${rec.id}`) ? 'Dispatching...' : 'Dispatch Work Order'}</span>
                           </button>
                         ) : (
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleApprove(rec)}
+                              disabled={isMutationPending(`approveRecommendation:${rec.id}`)}
                               title="Sign off and validate this AI mitigation as official SOP"
-                              className="h-8 px-3 text-[13px] font-medium text-[#2F5BFF] bg-[#EEF3FF] hover:bg-[#D9E4FF] rounded-lg transition-colors cursor-pointer"
+                              className="h-8 px-3 text-[13px] font-medium text-[#2F5BFF] bg-[#EEF3FF] hover:bg-[#D9E4FF] rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                             >
-                              Approve
+                              {isMutationPending(`approveRecommendation:${rec.id}`) ? 'Approving...' : 'Approve'}
                             </button>
                             <button
                               onClick={() => handleCreateTask(rec)}
+                              disabled={isMutationPending(`createActionTaskFromRecommendation:${rec.id}`)}
                               title="Approve and immediately dispatch an official Work Order to the maintenance team"
-                              className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                              className="h-8 px-3 text-[13px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                               <ClipboardList className="w-3.5 h-3.5" />
-                              <span>Assign Work Order</span>
+                              <span>{isMutationPending(`createActionTaskFromRecommendation:${rec.id}`) ? 'Dispatching...' : 'Assign Work Order'}</span>
                             </button>
                           </div>
                         )}
@@ -490,10 +500,19 @@ export function InvestigationDrawer() {
                 });
                 showToast('All recommended mitigations approved successfully', 'success');
               }}
-              className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-2 shadow-xs"
+              disabled={investigation.recommendations.some(
+                (rec) => rec.status === 'Pending' && isMutationPending(`approveRecommendation:${rec.id}`)
+              )}
+              className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-2 shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Approve All Fixes</span>
+              <span>
+                {investigation.recommendations.some(
+                  (rec) => rec.status === 'Pending' && isMutationPending(`approveRecommendation:${rec.id}`)
+                )
+                  ? 'Approving...'
+                  : 'Approve All Fixes'}
+              </span>
             </button>
           </div>
         </div>

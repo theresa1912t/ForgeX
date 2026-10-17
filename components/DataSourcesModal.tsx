@@ -33,6 +33,7 @@ export function DataSourcesModal({ isOpen, onClose, defaultMachineId }: DataSour
     machineProfiles,
     machines,
     showToast,
+    isMutationPending,
   } = useFactory();
 
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -189,14 +190,19 @@ export function DataSourcesModal({ isOpen, onClose, defaultMachineId }: DataSour
 
                         {/* Test Connection Button */}
                         <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={() => handleTestPing(conn.id, conn.name)}
-                            disabled={testingId === conn.id}
-                            className="h-9 px-3.5 rounded-lg text-[13px] font-medium border border-[#E4E7EB] hover:bg-[#F7F8FA] text-[#18202A] transition-colors flex items-center gap-2 disabled:opacity-60"
-                          >
-                            <RefreshCw className={`w-3.5 h-3.5 ${testingId === conn.id ? 'animate-spin text-[#2F5BFF]' : 'text-[#5F6875]'}`} />
-                            <span>{testingId === conn.id ? 'Testing...' : 'Test Signal'}</span>
-                          </button>
+                          {(() => {
+                            const isTesting = testingId === conn.id || isMutationPending(`testConnection:${conn.id}`);
+                            return (
+                              <button
+                                onClick={() => handleTestPing(conn.id, conn.name)}
+                                disabled={isTesting}
+                                className="h-9 px-3.5 rounded-lg text-[13px] font-medium border border-[#E4E7EB] hover:bg-[#F7F8FA] text-[#18202A] transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin text-[#2F5BFF]' : 'text-[#5F6875]'}`} />
+                                <span>{isTesting ? 'Testing...' : 'Test Signal'}</span>
+                              </button>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -315,9 +321,10 @@ export function DataSourcesModal({ isOpen, onClose, defaultMachineId }: DataSour
                 </button>
                 <button
                   type="submit"
-                  className="h-10 px-5 rounded-lg text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] transition-colors shadow-xs"
+                  disabled={isMutationPending('addDeviceConnection')}
+                  className="h-10 px-5 rounded-lg text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] transition-colors shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Save & Connect Gateway
+                  {isMutationPending('addDeviceConnection') ? 'Connecting...' : 'Save & Connect Gateway'}
                 </button>
               </div>
             </form>

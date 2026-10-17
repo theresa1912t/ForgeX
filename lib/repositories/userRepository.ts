@@ -13,7 +13,7 @@ const PUBLIC_SELECT = {
 } as const;
 
 export async function findAll(client: DbClient = prisma) {
-  return client.user.findMany({ select: PUBLIC_SELECT });
+  return client.user.findMany({ select: PUBLIC_SELECT, orderBy: { id: 'asc' } });
 }
 
 export async function findById(id: string, client: DbClient = prisma) {

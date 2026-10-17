@@ -28,6 +28,7 @@ export function SettingsModule() {
     addNotification,
     deviceConnections,
     testConnection,
+    isMutationPending,
   } = useFactory();
 
   const [activeSubTab, setActiveSubTab] = useState<'thresholds' | 'connectivity' | 'org' | 'users' | 'ai'>('thresholds');
@@ -196,10 +197,17 @@ export function SettingsModule() {
           <div className="flex items-center justify-end pt-4 border-t border-[#E4E7EB]">
             <button
               onClick={handleSaveThresholds}
-              className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-sm flex items-center gap-2"
+              disabled={isMutationPending('updateThresholds')}
+              className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {savedSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-              <span>{savedSuccess ? 'Thresholds Saved' : 'Save Operational Thresholds'}</span>
+              {isMutationPending('updateThresholds') ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : savedSuccess ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>{isMutationPending('updateThresholds') ? 'Saving...' : savedSuccess ? 'Thresholds Saved' : 'Save Operational Thresholds'}</span>
             </button>
           </div>
         </div>
@@ -253,10 +261,11 @@ export function SettingsModule() {
 
                   <button
                     onClick={() => testConnection(conn.id)}
-                    className="h-9 px-3.5 rounded-lg text-[13px] font-medium border border-[#E4E7EB] hover:bg-[#F7F8FA] text-[#18202A] transition-colors flex items-center gap-2 shrink-0"
+                    disabled={isMutationPending(`testConnection:${conn.id}`)}
+                    className="h-9 px-3.5 rounded-lg text-[13px] font-medium border border-[#E4E7EB] hover:bg-[#F7F8FA] text-[#18202A] transition-colors flex items-center gap-2 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <RefreshCw className="w-3.5 h-3.5 text-[#5F6875]" />
-                    <span>Ping Test</span>
+                    <RefreshCw className={`w-3.5 h-3.5 text-[#5F6875] ${isMutationPending(`testConnection:${conn.id}`) ? 'animate-spin' : ''}`} />
+                    <span>{isMutationPending(`testConnection:${conn.id}`) ? 'Pinging...' : 'Ping Test'}</span>
                   </button>
                 </div>
 

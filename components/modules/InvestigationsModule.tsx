@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/calculations';
 
+const HERO_INVESTIGATION_ID = 'inv-line3-hero';
+
 export function InvestigationsModule() {
   const {
     investigations,
@@ -40,6 +42,7 @@ export function InvestigationsModule() {
     setActiveTab,
     previousTab,
     showToast,
+    isMutationPending,
   } = useFactory();
 
   const currentInv =
@@ -142,9 +145,9 @@ export function InvestigationsModule() {
         <div className="flex items-center gap-3 text-[13px] text-[#5F6875]">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#EEF3FF] text-[#2F5BFF] font-medium border border-[#D9E4FF]">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Analysis Complete · 4m ago</span>
+            <span>AI Analysis Complete</span>
           </span>
-          <span className="hidden md:inline">Confidence: <strong className="text-[#18202A] font-semibold">87%</strong></span>
+          <span className="hidden md:inline">Confidence: <strong className="text-[#18202A] font-semibold">{currentInv.rootCauses[0]?.confidence ?? 0}%</strong></span>
         </div>
       </div>
 
@@ -155,7 +158,7 @@ export function InvestigationsModule() {
             Diagnostic Subpage · {currentInv.lineName} ({currentInv.machineName})
           </div>
           <h1 className="text-[32px] leading-[40px] font-semibold text-[#18202A]">
-            Why did Line 3 production drop 14%?
+            {currentInv.title}
           </h1>
           <p className="text-[15px] leading-[24px] text-[#5F6875] mt-2">
             AI root cause analysis correlating equipment telemetry, quality checkweighers, and raw material lots.
@@ -195,8 +198,6 @@ export function InvestigationsModule() {
               <span>Throughput Recovered: <strong>+{currentInv.resolutionOutcome.recoveredUnitsPerHour} units/hr</strong></span>
               <span>·</span>
               <span>Signed Off By: <strong>{currentInv.resolutionOutcome.completedBy}</strong></span>
-              <span>·</span>
-              <span>Vibration: <strong>2.15 mm/s (Normal)</strong></span>
             </div>
           </div>
         </div>
@@ -224,7 +225,7 @@ export function InvestigationsModule() {
           </div>
 
           <div className="text-[13px] text-[#5F6875]">
-            Detected at <strong className="text-[#18202A]">10:42 AM</strong>
+            Detected at <strong className="text-[#18202A]">{currentInv.startTime}</strong>
           </div>
         </div>
 
@@ -232,7 +233,7 @@ export function InvestigationsModule() {
           <div>
             <div className="text-[14px] text-[#5F6875]">Output Variance</div>
             <div className={`text-[28px] leading-[36px] font-semibold mt-1 ${isResolved ? 'text-[#18864B]' : 'text-[#D92D20]'}`}>
-              {isResolved ? '+14% recovered' : '-14.0%'}
+              {currentInv.outputVariancePct}%
             </div>
             <div className="text-[13px] text-[#8A93A0] mt-1">vs planned target</div>
           </div>
@@ -240,23 +241,23 @@ export function InvestigationsModule() {
           <div>
             <div className="text-[14px] text-[#5F6875]">Estimated Revenue Loss</div>
             <div className="text-[28px] leading-[36px] font-semibold text-[#D92D20] mt-1">
-              $4,650
+              {formatCurrency(businessImpact.estimatedRevenueLoss)}
             </div>
-            <div className="text-[13px] text-[#8A93A0] mt-1">3,720 lost units ($1.25/unit)</div>
+            <div className="text-[13px] text-[#8A93A0] mt-1">{formatNumber(businessImpact.lostUnits)} lost units</div>
           </div>
 
           <div>
             <div className="text-[14px] text-[#5F6875]">Incident Duration</div>
             <div className="text-[28px] leading-[36px] font-semibold text-[#18202A] mt-1">
-              3h 18m
+              {currentInv.duration}
             </div>
-            <div className="text-[13px] text-[#8A93A0] mt-1">Active bottleneck</div>
+            <div className="text-[13px] text-[#8A93A0] mt-1">{isResolved ? 'Resolved' : 'Active bottleneck'}</div>
           </div>
 
           <div>
             <div className="text-[14px] text-[#5F6875]">Current Loss Rate</div>
             <div className="text-[28px] leading-[36px] font-semibold text-[#D92D20] mt-1">
-              $1,400/hr
+              ${formatNumber(businessImpact.currentLossRatePerHour)}/hr
             </div>
             <div className="text-[13px] text-[#8A93A0] mt-1">Compounding loss</div>
           </div>
@@ -269,44 +270,41 @@ export function InvestigationsModule() {
           What Happened?
         </h2>
         <p className="text-[15px] leading-[24px] text-[#5F6875] mb-6">
-          Production output on Line 3 collapsed from the scheduled 5,000 units/hr to 4,300 units/hr (-14%). Automated cross-source correlation isolated Filling Machine M-03 as the focal bottleneck, where filling valve diaphragm resistance caused intermittent cycle stalls and fill-height variance.
+          {currentInv.summary}
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">
             <div className="text-[13px] text-[#5F6875]">Output Variance</div>
-            <div className="text-[18px] font-semibold text-[#D92D20] mt-1">-14%</div>
+            <div className="text-[18px] font-semibold text-[#D92D20] mt-1">{currentInv.outputVariancePct}%</div>
             <div className="text-[13px] text-[#8A93A0] mt-0.5">vs expected</div>
           </div>
 
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">
             <div className="text-[13px] text-[#5F6875]">Start Time</div>
-            <div className="text-[18px] font-semibold text-[#18202A] mt-1">10:42 AM</div>
-            <div className="text-[13px] text-[#8A93A0] mt-0.5">Today</div>
+            <div className="text-[18px] font-semibold text-[#18202A] mt-1 truncate">{currentInv.startTime}</div>
           </div>
 
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">
             <div className="text-[13px] text-[#5F6875]">Duration</div>
-            <div className="text-[18px] font-semibold text-[#18202A] mt-1">3h 18m</div>
-            <div className="text-[13px] text-[#8A93A0] mt-0.5">Active</div>
+            <div className="text-[18px] font-semibold text-[#18202A] mt-1">{currentInv.duration}</div>
+            <div className="text-[13px] text-[#8A93A0] mt-0.5">{isResolved ? 'Resolved' : 'Active'}</div>
           </div>
 
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">
             <div className="text-[13px] text-[#5F6875]">Affected Product</div>
-            <div className="text-[18px] font-semibold text-[#18202A] mt-1 truncate">Orange Drink</div>
-            <div className="text-[13px] text-[#8A93A0] mt-0.5">500ml bottle</div>
+            <div className="text-[18px] font-semibold text-[#18202A] mt-1 truncate">{currentInv.productName || 'N/A'}</div>
           </div>
 
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">
             <div className="text-[13px] text-[#5F6875]">Affected Line</div>
-            <div className="text-[18px] font-semibold text-[#18202A] mt-1">Line 3</div>
-            <div className="text-[13px] text-[#8A93A0] mt-0.5">Hot-fill rotary</div>
+            <div className="text-[18px] font-semibold text-[#18202A] mt-1">{currentInv.lineName}</div>
+            <div className="text-[13px] text-[#8A93A0] mt-0.5 truncate">{currentInv.machineName}</div>
           </div>
 
           <div className="p-4 bg-[#F7F8FA] rounded-xl border border-[#E4E7EB]">
             <div className="text-[13px] text-[#5F6875]">Operating Shift</div>
-            <div className="text-[18px] font-semibold text-[#18202A] mt-1">Shift B</div>
-            <div className="text-[13px] text-[#8A93A0] mt-0.5">Lead: M. Vance</div>
+            <div className="text-[18px] font-semibold text-[#18202A] mt-1">{currentInv.shift}</div>
           </div>
         </div>
       </div>
@@ -403,7 +401,11 @@ export function InvestigationsModule() {
         </div>
       </div>
 
-      {/* Section C.2: Multi-Signal Cross-Correlation Triangulation */}
+      {/* Section C.2: Multi-Signal Cross-Correlation Triangulation — narrative detail specific to
+          the seeded hero scenario (no generic equivalent fields exist on Investigation for an
+          AI-generated case), so it only renders for that one case. Root Cause Analysis (D) and
+          Evidence Registry (E) below are real and investigation-specific for every case. */}
+      {currentInv.id === HERO_INVESTIGATION_ID && (
       <div className="card-base space-y-4 border-2 border-[#2F5BFF]/20 bg-[#FBFDFF]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EB]">
           <div>
@@ -507,6 +509,7 @@ export function InvestigationsModule() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Section D: Root Cause Analysis */}
       <div className="card-base">
@@ -800,10 +803,11 @@ export function InvestigationsModule() {
                       </button>
                       <button
                         onClick={() => handleApprove(rec.id)}
-                        className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                        disabled={isMutationPending(`approveRecommendation:${rec.id}`)}
+                        className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg shadow-sm transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <Check className="w-4 h-4" />
-                        <span>Approve Action</span>
+                        <span>{isMutationPending(`approveRecommendation:${rec.id}`) ? 'Approving...' : 'Approve Action'}</span>
                       </button>
                     </>
                   )}
@@ -885,9 +889,10 @@ export function InvestigationsModule() {
               </button>
               <button
                 onClick={handleConfirmTaskCreate}
-                className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg shadow-sm"
+                disabled={isMutationPending(`createActionTaskFromRecommendation:${selectedActionModalRec.id}`)}
+                className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Create Task in Action Center
+                {isMutationPending(`createActionTaskFromRecommendation:${selectedActionModalRec.id}`) ? 'Creating...' : 'Create Task in Action Center'}
               </button>
             </div>
           </div>

@@ -10,7 +10,7 @@ function serialize<T extends { protocol: $Enums.ProtocolType }>(row: T) {
 }
 
 export async function findAll(client: DbClient = prisma) {
-  const rows = await client.deviceConnection.findMany();
+  const rows = await client.deviceConnection.findMany({ orderBy: { id: 'asc' } });
   return rows.map(serialize);
 }
 

@@ -25,6 +25,7 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
     setActiveTab,
     setSelectedInvestigationId,
     setSelectedAlertId,
+    isMutationPending,
   } = useFactory();
 
   if (!isOpen) return null;
@@ -71,9 +72,10 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
           <div className="flex items-center gap-3">
             <button
               onClick={markAllNotificationsAsRead}
-              className="text-[13px] text-[#5F6875] hover:text-[#18202A] hover:underline"
+              disabled={isMutationPending('markAllNotificationsAsRead')}
+              className="text-[13px] text-[#5F6875] hover:text-[#18202A] hover:underline disabled:opacity-60 disabled:cursor-not-allowed disabled:no-underline"
             >
-              Mark all read
+              {isMutationPending('markAllNotificationsAsRead') ? 'Marking...' : 'Mark all read'}
             </button>
             <button
               onClick={onClose}
@@ -92,11 +94,15 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
               <p className="text-[14px]">No active notifications</p>
             </div>
           ) : (
-            notifications.map((notif) => (
+            notifications.map((notif) => {
+              const isMarking = isMutationPending(`markNotificationAsRead:${notif.id}`);
+              return (
               <div
                 key={notif.id}
-                onClick={() => handleNotificationClick(notif)}
-                className={`p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                onClick={() => !isMarking && handleNotificationClick(notif)}
+                className={`p-4 rounded-xl border text-left transition-all ${
+                  isMarking ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+                } ${
                   notif.read
                     ? 'bg-white border-[#E4E7EB] hover:bg-[#F7F8FA]'
                     : 'bg-[#F8FAFF] border-[#D9E4FF] shadow-sm'
@@ -130,7 +136,8 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                   </div>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

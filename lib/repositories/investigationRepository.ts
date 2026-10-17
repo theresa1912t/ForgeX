@@ -30,7 +30,7 @@ function serialize(investigation: InvestigationWithRelations) {
 }
 
 export async function findAll(client: DbClient = prisma) {
-  const rows = await client.investigation.findMany({ include });
+  const rows = await client.investigation.findMany({ include, orderBy: { id: 'asc' } });
   return rows.map(serialize);
 }
 

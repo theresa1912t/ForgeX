@@ -10,7 +10,7 @@ function serialize<T extends { status: $Enums.MaintenanceStatus }>(row: T) {
 }
 
 export async function findAll(client: DbClient = prisma) {
-  const rows = await client.maintenanceRecord.findMany();
+  const rows = await client.maintenanceRecord.findMany({ orderBy: { id: 'asc' } });
   return rows.map(serialize);
 }
 

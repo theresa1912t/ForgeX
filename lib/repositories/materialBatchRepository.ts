@@ -10,13 +10,14 @@ function serialize<T extends { status: $Enums.MaterialBatchStatus }>(row: T) {
 }
 
 export async function findAll(client: DbClient = prisma) {
-  const rows = await client.materialBatch.findMany();
+  const rows = await client.materialBatch.findMany({ orderBy: { id: 'asc' } });
   return rows.map(serialize);
 }
 
 export async function findByRelatedAlert(alertId: string, client: DbClient = prisma) {
   const rows = await client.materialBatch.findMany({
     where: { relatedAlertIds: { has: alertId } },
+    orderBy: { id: 'asc' },
   });
   return rows.map(serialize);
 }

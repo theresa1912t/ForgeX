@@ -32,11 +32,19 @@ export function Header({ onToggleNotifications, unreadCount }: HeaderProps) {
     setTimeFilterPreset,
     selectedShift,
     showToast,
+    isMutationPending,
   } = useFactory();
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showFactoryMenu, setShowFactoryMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const isResetting = isMutationPending('resetDemoToHeroState');
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await signOut({ callbackUrl: '/login' });
+  };
 
   const selectedFactory = factories.find((f) => f.id === selectedFactoryId) || factories[0];
 
@@ -137,11 +145,12 @@ export function Header({ onToggleNotifications, unreadCount }: HeaderProps) {
         {/* Reset Demo Button */}
         <button
           onClick={resetDemoToHeroState}
+          disabled={isResetting}
           title="Reset hero incident state"
-          className="hidden sm:flex items-center gap-2 h-10 px-3 text-[14px] font-normal text-[#5F6875] hover:text-[#18202A] bg-[#FFFFFF] hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors"
+          className="hidden sm:flex items-center gap-2 h-10 px-3 text-[14px] font-normal text-[#5F6875] hover:text-[#18202A] bg-[#FFFFFF] hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <RotateCcw className="w-4 h-4 text-[#8A93A0]" />
-          <span className="hidden lg:inline text-[13px]">Reset Scenario</span>
+          <RotateCcw className={`w-4 h-4 text-[#8A93A0] ${isResetting ? 'animate-spin' : ''}`} />
+          <span className="hidden lg:inline text-[13px]">{isResetting ? 'Resetting...' : 'Reset Scenario'}</span>
         </button>
 
         {/* Notification Bell */}
@@ -183,11 +192,12 @@ export function Header({ onToggleNotifications, unreadCount }: HeaderProps) {
                 </span>
               </div>
               <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="w-full text-left px-4 py-2.5 text-[14px] text-[#D92D20] hover:bg-[#FEF3F2] flex items-center gap-2"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="w-full text-left px-4 py-2.5 text-[14px] text-[#D92D20] hover:bg-[#FEF3F2] flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <LogOut className="w-4 h-4" />
-                Log out
+                {isLoggingOut ? 'Logging out...' : 'Log out'}
               </button>
             </div>
           )}

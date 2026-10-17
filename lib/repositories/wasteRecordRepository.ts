@@ -21,12 +21,12 @@ function serialize<T extends { defectCategory: $Enums.WasteDefectCategory | null
 }
 
 export async function findAll(client: DbClient = prisma) {
-  const rows = await client.wasteRecord.findMany();
+  const rows = await client.wasteRecord.findMany({ orderBy: { id: 'asc' } });
   return rows.map(serialize);
 }
 
 export async function findByMachine(machineId: string, client: DbClient = prisma) {
-  const rows = await client.wasteRecord.findMany({ where: { machineId } });
+  const rows = await client.wasteRecord.findMany({ where: { machineId }, orderBy: { id: 'asc' } });
   return rows.map(serialize);
 }
 

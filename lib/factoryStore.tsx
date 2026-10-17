@@ -181,6 +181,10 @@ interface FactoryContextType {
   // Investigation engine (Phase 6 — see lib/usecases/investigations/generateInvestigation.ts).
   // Returns the created investigation (or undefined on failure) so the caller can navigate into it.
   generateInvestigation: (alertId: string) => Promise<Investigation | undefined>;
+
+  // True while a mutation keyed by `key` is in flight — see lib/mutations.ts's withPending.
+  // Buttons use this to show a loading/disabled state and avoid double-firing on a slow network.
+  isMutationPending: (key: string) => boolean;
 }
 
 const FactoryContext = createContext<FactoryContextType | undefined>(undefined);
@@ -464,6 +468,7 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         resetDemoToHeroState,
         evaluateThresholds: mutations.evaluateThresholds,
         generateInvestigation: mutations.generateInvestigation,
+        isMutationPending: mutations.isPending,
       }}
     >
       {children}

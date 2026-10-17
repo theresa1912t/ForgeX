@@ -21,7 +21,7 @@ function serializeWithInvestigation<
 const WITH_INVESTIGATION = { investigation: { select: { id: true } } } as const;
 
 export async function findAll(client: DbClient = prisma) {
-  const rows = await client.alert.findMany({ include: WITH_INVESTIGATION });
+  const rows = await client.alert.findMany({ include: WITH_INVESTIGATION, orderBy: { id: 'asc' } });
   return rows.map(serializeWithInvestigation);
 }
 
