@@ -10,40 +10,36 @@ import {
   TrendingDown,
   Activity,
   DollarSign,
-  Layers,
   Wrench,
-  ShieldCheck,
-  ChevronDown,
-  ChevronUp,
   Sparkles,
   ArrowRight,
   ArrowLeft,
   Check,
-  X,
   Flame,
   Boxes,
   Cpu,
   ClipboardList,
+  RotateCcw,
+  Gauge,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/calculations';
 import { RecommendedAction } from '@/lib/types';
-
-const HERO_INVESTIGATION_ID = 'inv-line3-hero';
 
 export function InvestigationsModule() {
   const {
     investigations,
     selectedInvestigationId,
     setSelectedInvestigationId,
-    approveRecommendation,
     createActionTaskFromRecommendation,
     completeTaskWithOutcome,
     actionTasks,
-    activeTab,
     setActiveTab,
     previousTab,
     showToast,
-    isMutationPending,
+    resetDemoToHeroState,
   } = useFactory();
 
   const currentInv =
@@ -51,41 +47,36 @@ export function InvestigationsModule() {
     investigations['inv-line3-hero'] ||
     Object.values(investigations)[0];
 
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'telemetry' | 'financial'>('overview');
+  const [activeEvidenceTab, setActiveEvidenceTab] = useState<'synthesis' | 'sensors' | 'deep_dive'>('synthesis');
   const [expandedCauseId, setExpandedCauseId] = useState<string>('rc-1');
-  const [selectedActionModalRec, setSelectedActionModalRec] = useState<RecommendedAction | null>(null);
-  const [rejectModalRec, setRejectModalRec] = useState<RecommendedAction | null>(null);
-  const [rejectReason, setRejectReason] = useState('Operating telemetry is within permissible variance');
-  const [assignedTechnician, setAssignedTechnician] = useState('Carlos Ruiz');
-  const [taskDueDate, setTaskDueDate] = useState('Today (Within 1 hour)');
 
   if (!currentInv) {
     return (
       <div className="py-24 max-w-xl mx-auto text-center space-y-4">
-        <div className="w-12 h-12 rounded-xl bg-[#F1F3F5] text-[#5F6875] flex items-center justify-center mx-auto">
+        <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
           <SearchCode className="w-6 h-6" />
         </div>
-        <h2 className="text-[22px] leading-[30px] font-semibold text-[#18202A]">
+        <h2 className="text-[22px] leading-[30px] font-semibold text-slate-900">
           No Active Investigation Selected
         </h2>
-        <p className="text-[15px] leading-[24px] text-[#5F6875]">
-          Investigations in FactoryLens are launched on-demand from operational alerts or telemetry anomalies. You can open an investigation directly from any active issue.
+        <p className="text-[15px] leading-[24px] text-slate-500">
+          Select an active incident from the dashboard or alerts to run root-cause diagnosis.
         </p>
         <div className="pt-2 flex items-center justify-center gap-3">
           <button
-            onClick={() => setActiveTab('alerts')}
-            className="h-10 px-4 text-[14px] font-medium text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors cursor-pointer"
+            onClick={() => setActiveTab('dashboard')}
+            className="h-10 px-4 text-[14px] font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
           >
-            View Active Alerts
+            Back to Dashboard
           </button>
           <button
             onClick={() => {
               setSelectedInvestigationId('inv-line3-hero');
               setActiveTab('investigations');
             }}
-            className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors shadow-sm cursor-pointer"
+            className="h-10 px-4 text-[14px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-xs cursor-pointer"
           >
-            Open Line 3 Root Cause Case
+            Open Line 3 Speed Loss Case
           </button>
         </div>
       </div>
@@ -93,897 +84,601 @@ export function InvestigationsModule() {
   }
 
   const isResolved = currentInv.status === 'Resolved';
-  const isHero = currentInv.id === HERO_INVESTIGATION_ID;
   const { businessImpact } = currentInv;
   const linkedTask = actionTasks.find(
-    (t) => t.investigationId === currentInv.id || t.alertId === currentInv.alertId
+    (t) => t.investigationId === currentInv.id || t.alertId === 'alt-line3-loss'
   );
+  const isTaskDispatched = Boolean(linkedTask);
 
-  const primaryRec = currentInv.recommendations?.[0];
-
-  const handleApprove = (recId: string) => {
-    approveRecommendation(currentInv.id, recId);
-    showToast('Recommendation approved and validated as operational SOP', 'success');
+  const primaryRec = currentInv.recommendations?.[0] || {
+    id: 'rec-1',
+    investigationId: currentInv.id,
+    title: 'Inspect filling valve M-03-V2 & replace worn diaphragm seal',
+    reason: 'Mechanical wear on elastomer diaphragm head #4/#8 is causing fluid throttling, pressure drop, and vibration.',
+    priority: 'Critical',
+    owner: 'Maintenance',
+    estimatedEffort: '30 minutes',
+    expectedImpact: 'Recover 1,000 bottles/hr (~$1,683/hr revenue)',
+    evidence: 'Vibration +38%, cycle time +22%',
+    status: 'Pending',
   };
 
-  const handleOpenAssignModal = (rec: RecommendedAction) => {
-    setSelectedActionModalRec(rec);
+  // Direct In-Place Handlers (Zero Tab Bouncing)
+  const handleQuickDispatch = () => {
+    createActionTaskFromRecommendation(
+      currentInv.id,
+      primaryRec,
+      'Carlos Ruiz',
+      'Today (Within 45 mins)'
+    );
+    showToast('Work order dispatched to Carlos Ruiz (Senior Maintenance Tech)', 'success');
   };
 
-  const handleConfirmTaskCreate = () => {
-    if (selectedActionModalRec) {
-      createActionTaskFromRecommendation(
-        currentInv.id,
-        selectedActionModalRec,
-        assignedTechnician,
-        taskDueDate
-      );
-      showToast(`Work order dispatched to ${assignedTechnician}`, 'success');
-      setSelectedActionModalRec(null);
-      setActiveTab('actions');
-    }
+  const handleQuickComplete = () => {
+    const taskId = linkedTask?.id || 'tsk-line3-filler';
+    completeTaskWithOutcome(
+      taskId,
+      'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
+      'Completed replacement under +0.2 bar backpressure test. Output normalized to 5,380 bph.',
+      1000
+    );
+    showToast('Maintenance verified! Line 3 output fully restored to 5,380 bottles/hr', 'success');
   };
 
-  const handleConfirmReject = () => {
-    if (rejectModalRec) {
-      showToast(`Recommendation "${rejectModalRec.title}" was dismissed: ${rejectReason}`, 'info');
-      setRejectModalRec(null);
-    }
+  const handleReset = () => {
+    resetDemoToHeroState();
+    showToast('Demo reset to initial bottleneck state.', 'info');
   };
 
-  const backDestination = previousTab === 'alerts' ? 'Alerts' : previousTab === 'actions' ? 'Action Center' : 'Dashboard';
+  const backDestination = previousTab === 'alerts' ? 'Alerts' : 'Dashboard';
 
   return (
-    <div className="space-y-6">
-      {/* 0. Contextual Navigation & Breadcrumb */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EB]">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* 1. Header Navigation & Breadcrumb */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
         <div className="flex items-center gap-2 text-[14px]">
           <button
             onClick={() => setActiveTab(previousTab || 'dashboard')}
-            className="inline-flex items-center gap-1.5 font-semibold text-[#2F5BFF] hover:text-[#2448D8] transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 font-semibold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to {backDestination}</span>
           </button>
-          <span className="text-[#8A93A0]">/</span>
-          <span className="text-[#5F6875]">Operations Intelligence</span>
-          <span className="text-[#8A93A0]">/</span>
-          <span className="text-[#18202A] font-semibold">Case #{currentInv.id.toUpperCase()}</span>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-500">Root-Cause Investigation</span>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-900 font-semibold">{currentInv.lineName} ({currentInv.machineName})</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#EEF3FF] text-[#2F5BFF] text-[12px] font-semibold border border-[#D9E4FF]">
+        <div className="flex items-center gap-2">
+          {isResolved && (
+            <button
+              onClick={handleReset}
+              className="h-8 px-3 text-[12px] font-medium text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Reset simulation to re-experience the investigation flow"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Scenario</span>
+            </button>
+          )}
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-[12px] font-medium border border-blue-200">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Root-Cause Diagnosis · Automated Correlation</span>
+            <span>Multi-Signal Correlation</span>
           </span>
         </div>
       </div>
 
-      {/* 1. Unified Incident Hero Card (Consolidated Metrics & Direct Actions) */}
-      <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#E4E7EB]">
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5 mb-2">
-              <span
-                className={`h-7 px-3 rounded-md text-[12px] font-bold uppercase tracking-wider inline-flex items-center ${
-                  isResolved
-                    ? 'bg-[#EDFDF2] text-[#18864B] border border-[#A6F4C5]'
-                    : 'bg-[#FEF3F2] text-[#D92D20] border border-[#FECDCA]'
-                }`}
-              >
-                {isResolved ? (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                    Resolved & Restored
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="w-3.5 h-3.5 mr-1" />
-                    Active Investigation
-                  </>
-                )}
-              </span>
-              <span className="text-[13px] font-semibold text-[#5F6875]">
-                {currentInv.lineName} · {currentInv.machineName}
-              </span>
-            </div>
+      {/* 2. Interactive 4-Step Resolution Stepper (Eliminates "Muter-Muter" Confusion) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
+            Resolution Lifecycle
+          </span>
+          <span className="text-[12px] font-medium text-slate-600">
+            {isResolved
+              ? 'Status: Problem Resolved & Verified'
+              : isTaskDispatched
+              ? 'Status: Technician Dispatched · Awaiting Sign-Off'
+              : 'Status: Root Cause Identified · Action Required'}
+          </span>
+        </div>
 
-            <h1 className="text-[26px] leading-[34px] font-bold text-[#18202A]">
-              {currentInv.title}
-            </h1>
-            <p className="text-[13px] leading-[20px] text-[#5F6875] mt-1.5 max-w-2xl">
-              {currentInv.summary}
-            </p>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[13px] text-[#5F6875]">
-              <span>Product: <strong className="text-[#18202A]">{currentInv.productName || 'N/A'}</strong></span>
-              <span>·</span>
-              <span>Operating Shift: <strong className="text-[#18202A]">{currentInv.shift}</strong></span>
-              <span>·</span>
-              <span>Triggered: <strong className="text-[#18202A]">{currentInv.startTime}</strong> ({currentInv.duration})</span>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 relative">
+          {/* Step 1: Anomaly Flagged */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50/60 border border-emerald-200">
+            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[12px] shrink-0">
+              <Check className="w-4 h-4" />
             </div>
-            {isResolved && currentInv.resolutionOutcome && (
-              <div className="mt-1.5 text-[13px] text-[#18864B] font-medium">
-                Signed off by {currentInv.resolutionOutcome.completedBy}: {currentInv.resolutionOutcome.notes}
-              </div>
-            )}
+            <div>
+              <div className="text-[11px] font-semibold text-emerald-800 uppercase">Step 1: Detection</div>
+              <div className="text-[13px] font-bold text-slate-900 leading-tight">Speed Deficit (-18.9%)</div>
+            </div>
           </div>
 
-          {/* Primary Quick-Action Header Box */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          {/* Step 2: Diagnosis */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50/60 border border-emerald-200">
+            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[12px] shrink-0">
+              <Check className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold text-emerald-800 uppercase">Step 2: Diagnosis</div>
+              <div className="text-[13px] font-bold text-slate-900 leading-tight">Valve #4 Diaphragm Seal</div>
+            </div>
+          </div>
+
+          {/* Step 3: Work Order */}
+          <div
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+              isResolved || isTaskDispatched
+                ? 'bg-emerald-50/60 border-emerald-200'
+                : 'bg-blue-50 border-blue-300 ring-2 ring-blue-100'
+            }`}
+          >
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[12px] shrink-0 ${
+                isResolved || isTaskDispatched
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-blue-600 text-white'
+              }`}
+            >
+              {isResolved || isTaskDispatched ? <Check className="w-4 h-4" /> : '3'}
+            </div>
+            <div>
+              <div
+                className={`text-[11px] font-semibold uppercase ${
+                  isResolved || isTaskDispatched ? 'text-emerald-800' : 'text-blue-700'
+                }`}
+              >
+                Step 3: Action
+              </div>
+              <div className="text-[13px] font-bold text-slate-900 leading-tight">
+                {isTaskDispatched ? 'Carlos Ruiz Assigned' : 'Dispatch Maintenance'}
+              </div>
+            </div>
+          </div>
+
+          {/* Step 4: Restored */}
+          <div
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+              isResolved
+                ? 'bg-emerald-50/60 border-emerald-200'
+                : 'bg-slate-50 border-slate-200 opacity-60'
+            }`}
+          >
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[12px] shrink-0 ${
+                isResolved
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-300 text-slate-600'
+              }`}
+            >
+              {isResolved ? <Check className="w-4 h-4" /> : '4'}
+            </div>
+            <div>
+              <div
+                className={`text-[11px] font-semibold uppercase ${
+                  isResolved ? 'text-emerald-800' : 'text-slate-500'
+                }`}
+              >
+                Step 4: Recovery
+              </div>
+              <div className="text-[13px] font-bold text-slate-900 leading-tight">
+                {isResolved ? 'Restored (5,380 bph)' : 'Pending Verification'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. The Linear Triage Core (3 High-Clarity Pillars) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        
+        {/* Pillar 1: The Problem (What is happening?) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
+                1. The Problem
+              </span>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                  isResolved
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                }`}
+              >
+                {isResolved ? 'Recovered' : 'Critical Deficit'}
+              </span>
+            </div>
+
+            <h3 className="text-[16px] font-bold text-slate-900 mt-3 leading-snug">
+              {currentInv.title}
+            </h3>
+            <p className="text-[13px] text-slate-500 mt-1">
+              Line 3 Aseptic Rotary Filler is running below target speed during the 200ml Almond Milk run.
+            </p>
+
+            <div className="mt-4 p-3 bg-slate-50 rounded-lg space-y-2 text-[13px]">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Current Velocity:</span>
+                <span className={`font-mono font-bold ${isResolved ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {isResolved ? '5,380 bph (+1,000)' : '4,380 bph (-18.9%)'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Target Velocity:</span>
+                <span className="font-mono font-semibold text-slate-800">5,400 bph</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Financial Burn Rate:</span>
+                <span className="font-mono font-bold text-amber-700">
+                  {isResolved ? '$0/hr (Halted)' : `$${formatNumber(businessImpact.currentLossRatePerHour)}/hr`}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 mt-4 text-[12px] text-slate-500 flex items-center justify-between">
+            <span>Shift Deficit: <strong>{isResolved ? '0 units' : '1,020 units/hr'}</strong></span>
+            <span>Shift: <strong>{currentInv.shift}</strong></span>
+          </div>
+        </div>
+
+        {/* Pillar 2: The Root Cause (Why is it happening?) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
+                2. Confirmed Root Cause
+              </span>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                68% Confidence · Rank #1
+              </span>
+            </div>
+
+            <h3 className="text-[16px] font-bold text-slate-900 mt-3 leading-snug">
+              Valve #4 Diaphragm Micro-Tear
+            </h3>
+            <p className="text-[13px] text-slate-600 mt-1 leading-relaxed">
+              Elastomer fatigue on rotary valve head #4 prevents full nozzle opening, causing fluid throttling, pressure loss, and vibration.
+            </p>
+
+            {/* 3 Core Sensor Proof Items */}
+            <div className="mt-4 space-y-2 text-[12px]">
+              <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                <span className="text-slate-600">Vibration (PLC R:102):</span>
+                <span className="font-mono font-bold text-rose-700">3.31 mm/s (+38% spike)</span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                <span className="text-slate-600">Dosing Cycle Time:</span>
+                <span className="font-mono font-bold text-rose-700">0.82s (+22% delay)</span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                <span className="text-slate-600">Manifold Pressure:</span>
+                <span className="font-mono font-bold text-amber-700">2.45 bar (-21% drop)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 mt-4 text-[12px] text-slate-500 flex items-center justify-between">
+            <span>Machine: <strong>Aseptic Filler M-03</strong></span>
+            <span>Secondary factor: <strong>Milk Viscosity (+8.4%)</strong></span>
+          </div>
+        </div>
+
+        {/* Pillar 3: The Action Hub (Everything actionable happens right here!) */}
+        <div
+          className={`rounded-xl p-5 shadow-xs flex flex-col justify-between border transition-all ${
+            isResolved
+              ? 'bg-emerald-50/50 border-emerald-300'
+              : isTaskDispatched
+              ? 'bg-amber-50/40 border-amber-300'
+              : 'bg-blue-50/40 border-blue-300'
+          }`}
+        >
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
+              <span className="text-[12px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>3. Direct Action &amp; Recovery</span>
+              </span>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                  isResolved
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : isTaskDispatched
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-blue-100 text-blue-800'
+                }`}
+              >
+                {isResolved ? 'Resolved' : isTaskDispatched ? 'In Progress' : 'Ready to Dispatch'}
+              </span>
+            </div>
+
+            <h3 className="text-[16px] font-bold text-slate-900 mt-3 leading-snug">
+              {primaryRec.title}
+            </h3>
+            <p className="text-[13px] text-slate-600 mt-1 leading-relaxed">
+              Target: Replace EPDM diaphragm seal kit on Valve M-03-V2. Recover +1,000 bottles/hr ($1,683/hr value).
+            </p>
+
+            {/* In-Place Status Display */}
+            <div className="mt-4 p-3 bg-white/80 rounded-lg border border-slate-200/80 space-y-1.5 text-[13px]">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Technician:</span>
+                <span className="font-semibold text-slate-900">Carlos Ruiz (Lead Mechanic)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Estimated Effort:</span>
+                <span className="font-semibold text-slate-900">30 minutes</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Expected Result:</span>
+                <span className="font-semibold text-emerald-700">+1,000 bph throughput</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive In-Place Action Buttons (Zero Tab Jumps) */}
+          <div className="mt-5 pt-3 border-t border-slate-200/60 space-y-2">
             {isResolved ? (
-              <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-100/70 border border-emerald-300 rounded-lg text-center space-y-2">
+                <div className="flex items-center justify-center gap-1.5 text-emerald-800 font-bold text-[13px]">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Line 3 Speed Fully Restored</span>
+                </div>
+                <p className="text-[12px] text-emerald-700">
+                  Valve replaced. Velocity restored to 5,380 bph and scrap rates returned to nominal baseline.
+                </p>
                 <button
-                  onClick={() => {
-                    setActiveTab('materials');
-                    showToast('Opening Materials Ledger to verify scrap documentation.', 'info');
-                  }}
-                  className="h-10 px-4 text-[13px] font-semibold text-[#18202A] bg-white border border-[#D0D5DD] hover:bg-[#F7F8FA] rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+                  onClick={handleReset}
+                  className="w-full h-8 px-3 text-[12px] font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <Flame className="w-4 h-4 text-[#D92D20]" />
-                  <span>Audit Scrap Ledger</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('actions')}
-                  className="h-10 px-4 text-[13px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Resolved in Action Center</span>
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Replay / Reset Scenario</span>
                 </button>
               </div>
-            ) : linkedTask ? (
-              <div className="flex items-center gap-3">
+            ) : isTaskDispatched ? (
+              <div className="space-y-2">
+                <div className="text-[12px] text-amber-800 font-medium flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Carlos Ruiz on-site at Filler M-03. Replacement in progress.</span>
+                </div>
                 <button
-                  onClick={() => {
-                    if (isHero) {
-                      completeTaskWithOutcome(
-                        linkedTask.id,
-                        'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
-                        'Completed replacement under +0.2 bar backpressure test. Output normalized.',
-                        1000
-                      );
-                    } else {
-                      completeTaskWithOutcome(
-                        linkedTask.id,
-                        `${linkedTask.title} completed.`,
-                        linkedTask.description,
-                      );
-                    }
-                  }}
-                  disabled={isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)}
-                  className="h-10 px-4 text-[13px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={handleQuickComplete}
+                  className="w-full h-10 px-4 text-[13px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>
-                    {isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)
-                      ? 'Completing...'
-                      : isHero
-                      ? 'Complete Maintenance & Restore Speed'
-                      : 'Mark Task Complete'}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('actions')}
-                  className="h-10 px-3.5 text-[13px] font-semibold text-[#18202A] bg-white border border-[#D0D5DD] hover:bg-[#F7F8FA] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>View Work Order</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Verify Fix &amp; Restore Line Speed</span>
                 </button>
               </div>
             ) : (
-              primaryRec && (
-                <button
-                  onClick={() => handleOpenAssignModal(primaryRec)}
-                  className="h-11 px-5 text-[14px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-xl transition-all flex items-center gap-2 shadow-md cursor-pointer"
-                >
-                  <ClipboardList className="w-4 h-4" />
-                  <span>Dispatch Work Order</span>
-                </button>
-              )
+              <button
+                onClick={handleQuickDispatch}
+                className="w-full h-11 px-4 text-[14px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>1-Click Dispatch Carlos Ruiz</span>
+              </button>
             )}
           </div>
         </div>
 
-        {/* 4 Core Vital Metrics (Glanceable, zero repetition) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
-          <div className="p-4 bg-[#F8FAFC] border border-[#E4E7EB] rounded-xl">
-            <div className="text-[12px] font-semibold text-[#5F6875] flex items-center justify-between">
-              <span>Throughput Deficit</span>
-              <TrendingDown className="w-4 h-4 text-[#D92D20]" />
-            </div>
-            <div className={`text-[24px] font-bold mt-1 font-mono ${isResolved ? 'text-[#18864B]' : 'text-[#D92D20]'}`}>
-              {currentInv.outputVariancePct}%
-            </div>
-            <div className="text-[12px] text-[#5F6875] mt-0.5">
-              {isResolved ? 'Resolved — restored to target' : 'vs planned target'}
+      </div>
+
+      {/* 4. Progressive Evidence & Deep Engineering Proof (Clean, Non-Intrusive) */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+        {/* Evidence Navigation Bar */}
+        <div className="px-6 py-3 border-b border-slate-200 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-bold text-slate-700">Deep Diagnostic Evidence:</span>
+            <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-lg">
+              <button
+                onClick={() => setActiveEvidenceTab('synthesis')}
+                className={`px-3 py-1.5 text-[12px] font-semibold rounded-md transition-colors cursor-pointer ${
+                  activeEvidenceTab === 'synthesis'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Multi-Signal Triangulation
+              </button>
+              <button
+                onClick={() => setActiveEvidenceTab('sensors')}
+                className={`px-3 py-1.5 text-[12px] font-semibold rounded-md transition-colors cursor-pointer ${
+                  activeEvidenceTab === 'sensors'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Live Sensor Registers ({currentInv.sensorDeltas?.length || 5})
+              </button>
+              <button
+                onClick={() => setActiveEvidenceTab('deep_dive')}
+                className={`px-3 py-1.5 text-[12px] font-semibold rounded-md transition-colors cursor-pointer ${
+                  activeEvidenceTab === 'deep_dive'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Root-Cause Ranking &amp; 5-Whys
+              </button>
             </div>
           </div>
 
-          <div className="p-4 bg-[#F8FAFC] border border-[#E4E7EB] rounded-xl">
-            <div className="text-[12px] font-semibold text-[#5F6875] flex items-center justify-between">
-              <span>Financial Loss Rate</span>
-              <DollarSign className="w-4 h-4 text-[#D92D20]" />
-            </div>
-            <div className="text-[24px] font-bold text-[#D92D20] mt-1 font-mono">
-              ${formatNumber(businessImpact.currentLossRatePerHour)}/hr
-            </div>
-            <div className="text-[12px] text-[#5F6875] mt-0.5">
-              {formatCurrency(businessImpact.estimatedRevenueLoss)} accumulated shift loss
-            </div>
-          </div>
-
-          <div className="p-4 bg-[#F8FAFC] border border-[#E4E7EB] rounded-xl">
-            <div className="text-[12px] font-semibold text-[#5F6875] flex items-center justify-between">
-              <span>Primary Failure Mode</span>
-              <Wrench className="w-4 h-4 text-[#2F5BFF]" />
-            </div>
-            <div className="text-[15px] font-bold text-[#18202A] mt-1 truncate">
-              {currentInv.rootCauses[0]?.title ?? 'Not yet determined'}
-            </div>
-            <div className="text-[12px] text-[#2F5BFF] font-semibold mt-0.5">
-              Rank #1 · {currentInv.rootCauses[0]?.confidence ?? 0}% Confidence
-            </div>
-          </div>
-
-          <div className="p-4 bg-[#F8FAFC] border border-[#E4E7EB] rounded-xl">
-            <div className="text-[12px] font-semibold text-[#5F6875] flex items-center justify-between">
-              <span>Material Waste</span>
-              <Flame className="w-4 h-4 text-[#D92D20]" />
-            </div>
-            <div className="text-[24px] font-bold text-[#18202A] mt-1 font-mono">
-              {businessImpact.materialWasteKg} kg
-            </div>
-            <div className="text-[12px] text-[#D92D20] font-medium mt-0.5">
-              ${businessImpact.materialWasteCost} scrap cost
-            </div>
-          </div>
+          <span className="text-[12px] text-slate-500 font-mono">
+            Line 3 OT Stream · Sensor Sync Active
+          </span>
         </div>
-      </div>
 
-      {/* 2. Three Clean Focus Tabs (Reducing Cognitive Load by Role/Task) */}
-      <div className="flex items-center gap-2 border-b border-[#E4E7EB]">
-        <button
-          onClick={() => setActiveSubTab('overview')}
-          className={`h-11 px-5 text-[14px] font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-            activeSubTab === 'overview'
-              ? 'border-[#2F5BFF] text-[#2F5BFF]'
-              : 'border-transparent text-[#5F6875] hover:text-[#18202A]'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Root Cause & Corrective Actions</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('telemetry')}
-          className={`h-11 px-5 text-[14px] font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-            activeSubTab === 'telemetry'
-              ? 'border-[#2F5BFF] text-[#2F5BFF]'
-              : 'border-transparent text-[#5F6875] hover:text-[#18202A]'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-          <span>Sensor Telemetry & Timeline</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('financial')}
-          className={`h-11 px-5 text-[14px] font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-            activeSubTab === 'financial'
-              ? 'border-[#2F5BFF] text-[#2F5BFF]'
-              : 'border-transparent text-[#5F6875] hover:text-[#18202A]'
-          }`}
-        >
-          <DollarSign className="w-4 h-4" />
-          <span>Financial & Scrap Accounting</span>
-        </button>
-      </div>
-
-      {/* TAB 1: ROOT CAUSE & CORRECTIVE ACTIONS (Default View) */}
-      {activeSubTab === 'overview' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          {/* A. Multi-Signal Triangulation (Machine OT × Ingredient Batch × Floor Scrap) — narrative
-              detail specific to the seeded hero scenario (no generic equivalent fields exist on
-              Investigation for an AI-generated case), so it only renders for that one case. The
-              Ranked Root Causes list below is real and investigation-specific for every case. */}
-          {isHero && (
-          <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-xs space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E4E7EB]">
-              <div>
-                <h3 className="text-[17px] font-bold text-[#18202A] flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#2F5BFF]" />
-                  <span>Multi-Signal Triangulation Synthesis</span>
-                </h3>
-                <p className="text-[13px] text-[#5F6875] mt-0.5">
-                  Cross-correlating physical machine kinematics, raw milk solids chemistry, and floor reject scales.
-                </p>
-              </div>
-              <span className="text-[12px] font-mono text-[#2F5BFF] bg-[#EEF3FF] px-2.5 py-1 rounded-md border border-[#D9E4FF] font-semibold self-start sm:self-auto">
-                Correlation Confidence: 87%
-              </span>
-            </div>
+        {/* Tab Content 1: Multi-Signal Synthesis */}
+        {activeEvidenceTab === 'synthesis' && (
+          <div className="p-6 space-y-4 animate-in fade-in duration-150">
+            <p className="text-[13px] text-slate-600 leading-relaxed">
+              FactoryLens cross-correlates 3 distinct data pipelines to confirm root cause without false-positive maintenance dispatches:
+            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Signal 1: Machine OT */}
-              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB] space-y-2.5">
+              {/* Signal 1 */}
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#2F5BFF] flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
                     <Cpu className="w-3.5 h-3.5" />
                     <span>Signal 1: Machine OT</span>
                   </span>
-                  <span className="text-[11px] font-mono text-[#D92D20] bg-[#FEF3F2] px-2 py-0.5 rounded font-bold border border-[#FECDCA]">
-                    Anomalous (68% Health)
+                  <span className="text-[11px] font-mono font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                    {isResolved ? 'Normalized' : 'Vibration +38%'}
                   </span>
                 </div>
-                <h4 className="font-bold text-[14px] text-[#18202A]">Aseptic Rotary Filler M-03</h4>
-                <p className="text-[13px] text-[#5F6875] leading-relaxed">
-                  Rotary manifold vibration escalated <strong>+38% (3.31 mm/s)</strong> and dosing duration stretched <strong>+22% (0.82s)</strong> on PLC register R:102.
+                <div className="text-[14px] font-bold text-slate-900">Aseptic Filler M-03</div>
+                <p className="text-[12px] text-slate-600 leading-relaxed">
+                  Rotary manifold accelerometer detected elevated vibration at <strong>3.31 mm/s</strong>. Dosing cycle stretched to <strong>0.82s (+22%)</strong>.
                 </p>
-                <div className="pt-2 border-t border-[#E4E7EB] text-[12px] text-[#18202A]">
-                  <strong>Physical Effect:</strong> Mechanical diaphragm fatigue on valve head #4.
-                </div>
               </div>
 
-              {/* Signal 2: Raw Material Batch */}
-              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB] space-y-2.5">
+              {/* Signal 2 */}
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#E56B00] flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
                     <Boxes className="w-3.5 h-3.5" />
-                    <span>Signal 2: Raw Ingredient</span>
+                    <span>Signal 2: Raw Ingredients</span>
                   </span>
-                  <span className="text-[11px] font-mono text-[#E56B00] bg-[#FFF6ED] px-2 py-0.5 rounded font-bold border border-[#FEDF89]">
+                  <span className="text-[11px] font-mono font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                     Viscosity +8.4%
                   </span>
                 </div>
-                <h4 className="font-bold text-[14px] text-[#18202A]">Raw Milk Lot #LOT-RAW-904</h4>
-                <p className="text-[13px] text-[#5F6875] leading-relaxed">
-                  Supplier CoA recorded raw milk viscosity at <strong>2.28 cP vs 2.10 cP nominal</strong> due to natural solids-not-fat, fed into batch PB-UHT-1008.
+                <div className="text-[14px] font-bold text-slate-900">Milk Lot #LOT-RAW-904</div>
+                <p className="text-[12px] text-slate-600 leading-relaxed">
+                  Supplier CoA showed raw viscosity at <strong>2.28 cP</strong> (nominal 2.10 cP). Added +0.2 bar backpressure, stressing the already worn diaphragm.
                 </p>
-                <div className="pt-2 border-t border-[#E4E7EB] text-[12px] text-[#18202A]">
-                  <strong>Physical Effect:</strong> Added +0.2 bar backpressure, stressing worn seals.
-                </div>
               </div>
 
-              {/* Signal 3: Quality Checkweigher Scrap */}
-              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB] space-y-2.5">
+              {/* Signal 3 */}
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#D92D20] flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700 flex items-center gap-1.5">
                     <Flame className="w-3.5 h-3.5" />
-                    <span>Signal 3: Reject Waste</span>
+                    <span>Signal 3: Reject Scale</span>
                   </span>
-                  <span className="text-[11px] font-mono text-[#D92D20] bg-[#FEF3F2] px-2 py-0.5 rounded font-bold border border-[#FECDCA]">
-                    128 kg ($768) Scrap
+                  <span className="text-[11px] font-mono font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                    {isResolved ? 'Zero Rejects' : '256 Bottles Scrap'}
                   </span>
                 </div>
-                <h4 className="font-bold text-[14px] text-[#18202A]">Inline Checkweigher CW-03</h4>
-                <p className="text-[13px] text-[#5F6875] leading-relaxed">
-                  Checkweigher rejected <strong>256 underfill bottles (&lt;988g)</strong> with erratic nozzle cut-off timing during high-speed rotary passes.
-                </p>
-                <div className="pt-2 border-t border-[#E4E7EB] text-[12px] text-[#18202A]">
-                  <strong>Physical Effect:</strong> Valve lag prevents complete dosing before cutoff.
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3.5 bg-[#EEF3FF] rounded-xl border border-[#D9E4FF] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[13px]">
-              <div className="text-[#18202A]">
-                <strong>Synthesis Finding:</strong> Mechanical diaphragm fatigue is the primary bottleneck constraint. The raw milk viscosity variation aggravated fluid resistance but did not cause the mechanical failure.
-              </div>
-            </div>
-          </div>
-          )}
-
-          {/* B. Ranked Root Causes (Clean Accordion Hierarchy) */}
-          <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-xs space-y-4">
-            <h3 className="text-[17px] font-bold text-[#18202A]">
-              Ranked Root-Cause Explanations
-            </h3>
-
-            <div className="space-y-3">
-              {currentInv.rootCauses.map((cause) => {
-                const isExpanded = expandedCauseId === cause.id;
-                const isRank1 = cause.rank === 1;
-
-                return (
-                  <div
-                    key={cause.id}
-                    className={`border rounded-xl transition-all overflow-hidden ${
-                      isRank1
-                        ? 'border-[#2F5BFF]/40 bg-[#F8FAFF]'
-                        : 'border-[#E4E7EB] bg-white'
-                    }`}
-                  >
-                    <div
-                      onClick={() => setExpandedCauseId(isExpanded ? '' : cause.id)}
-                      className="p-4 flex items-center justify-between cursor-pointer select-none"
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[13px] shrink-0 ${
-                            isRank1
-                              ? 'bg-[#2F5BFF] text-white shadow-xs'
-                              : 'bg-[#F1F3F5] text-[#5F6875]'
-                          }`}
-                        >
-                          #{cause.rank}
-                        </div>
-
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-[15px] font-bold text-[#18202A]">
-                              {cause.title}
-                            </h4>
-                            <span
-                              className={`text-[11px] font-bold px-2 py-0.5 rounded ${
-                                cause.status === 'Likely Contributor'
-                                  ? 'bg-[#FEF3F2] text-[#D92D20] border border-[#FECDCA]'
-                                  : cause.status === 'Secondary Factor'
-                                  ? 'bg-[#FFF6ED] text-[#E56B00] border border-[#FEDF89]'
-                                  : 'bg-[#F2F4F7] text-[#5F6875]'
-                              }`}
-                            >
-                              {cause.status}
-                            </span>
-                          </div>
-                          <p className="text-[13px] text-[#5F6875] mt-0.5">{cause.summary}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0 ml-4">
-                        <div className="text-right">
-                          <div className="text-[15px] font-bold text-[#18202A]">{cause.confidence}%</div>
-                          <div className="text-[11px] text-[#5F6875]">Confidence</div>
-                        </div>
-                        {isExpanded ? (
-                          <ChevronUp className="w-5 h-5 text-[#8A93A0]" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-[#8A93A0]" />
-                        )}
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="px-5 pb-4 pt-2 border-t border-[#E4E7EB] bg-white space-y-3">
-                        <div className="text-[13px] font-semibold text-[#18202A]">
-                          Supporting Telemetry Evidence:
-                        </div>
-                        <ul className="space-y-1.5 text-[13px] text-[#5F6875]">
-                          {cause.supportingEvidence.map((ev, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <span className="text-[#2F5BFF] font-bold">•</span>
-                              <span>{ev}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="p-3 bg-[#F8FAFC] rounded-lg text-[12px] text-[#5F6875]">
-                          <strong className="text-[#18202A]">Historical Precedent:</strong> {cause.historicalPrecedent}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* C. Actionable Work Order Recommendations */}
-          <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EB]">
-              <div>
-                <h3 className="text-[17px] font-bold text-[#18202A] flex items-center gap-2">
-                  <Wrench className="w-4 h-4 text-[#2F5BFF]" />
-                  <span>Recommended Corrective Actions</span>
-                </h3>
-                <p className="text-[13px] text-[#5F6875] mt-0.5">
-                  Verified maintenance standard operating procedures (SOPs) to recover lost line throughput.
+                <div className="text-[14px] font-bold text-slate-900">Checkweigher CW-03</div>
+                <p className="text-[12px] text-slate-600 leading-relaxed">
+                  Underfill reject bin logged <strong>128 kg ($768)</strong> material waste. Valve throttling prevented complete fill before carousel cutoff.
                 </p>
               </div>
             </div>
-
-            <div className="space-y-3">
-              {currentInv.recommendations.map((rec) => {
-                const isApproved = rec.status === 'Approved' || rec.status === 'Task Created';
-                const isTaskCreated = rec.status === 'Task Created';
-
-                return (
-                  <div
-                    key={rec.id}
-                    className="p-4 rounded-xl border border-[#E4E7EB] bg-white hover:border-[#D0D5DD] transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2.5 mb-1">
-                        <span
-                          className={`text-[11px] font-bold px-2 py-0.5 rounded ${
-                            rec.priority === 'Critical'
-                              ? 'bg-[#FEF3F2] text-[#D92D20] border border-[#FECDCA]'
-                              : 'bg-[#FFF6ED] text-[#E56B00] border border-[#FEDF89]'
-                          }`}
-                        >
-                          {rec.priority}
-                        </span>
-                        <h4 className="text-[15px] font-bold text-[#18202A]">
-                          {rec.title}
-                        </h4>
-                      </div>
-                      <p className="text-[13px] text-[#5F6875] leading-relaxed">
-                        {rec.reason}
-                      </p>
-                      <div className="mt-2.5 flex flex-wrap items-center gap-3 text-[12px] text-[#5F6875]">
-                        <span>Assigned Team: <strong className="text-[#18202A]">{rec.owner}</strong></span>
-                        <span>·</span>
-                        <span>Effort: <strong className="text-[#18202A]">{rec.estimatedEffort}</strong></span>
-                        <span>·</span>
-                        <span>Target: <strong className="text-[#18864B]">{rec.expectedImpact}</strong></span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      {isApproved || isTaskCreated ? (
-                        <span className="h-9 px-3.5 rounded-lg text-[13px] font-semibold bg-[#EDFDF2] text-[#18864B] border border-[#A6F4C5] inline-flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-[#18864B]" />
-                          <span>Dispatched to {rec.owner}</span>
-                        </span>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setRejectModalRec(rec)}
-                            className="h-9 px-3 text-[13px] font-semibold text-[#5F6875] hover:text-[#D92D20] hover:bg-[#FEF3F2] rounded-lg transition-colors cursor-pointer"
-                          >
-                            Dismiss
-                          </button>
-                          <button
-                            onClick={() => handleOpenAssignModal(rec)}
-                            className="h-9 px-3.5 text-[13px] font-semibold text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#D0D5DD] rounded-lg transition-colors cursor-pointer shadow-xs"
-                          >
-                            Assign...
-                          </button>
-                          <button
-                            onClick={() => handleApprove(rec.id)}
-                            disabled={isMutationPending(`approveRecommendation:${rec.id}`)}
-                            className="h-9 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>{isMutationPending(`approveRecommendation:${rec.id}`) ? 'Approving...' : 'Approve Action'}</span>
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* TAB 2: SENSOR TELEMETRY & EVENT TIMELINE */}
-      {activeSubTab === 'telemetry' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          {/* A. 5 Sensor Baseline vs Observed Deltas */}
-          <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-xs space-y-4">
-            <div>
-              <h3 className="text-[17px] font-bold text-[#18202A] flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#2F5BFF]" />
-                <span>Operational Telemetry & Baseline Deltas</span>
-              </h3>
-              <p className="text-[13px] text-[#5F6875] mt-0.5">
-                Comparing current real-time streaming registers against 30-day validated nominal baselines.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-              {currentInv.sensorDeltas.map((sensor, idx) => (
+        {/* Tab Content 2: Sensor Telemetry Registers */}
+        {activeEvidenceTab === 'sensors' && (
+          <div className="p-6 space-y-4 animate-in fade-in duration-150">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {currentInv.sensorDeltas?.map((sensor, idx) => (
                 <div
                   key={idx}
-                  className={`p-4 rounded-xl border flex flex-col justify-between ${
+                  className={`p-3.5 rounded-xl border ${
                     sensor.isAbnormal && !isResolved
-                      ? 'border-[#FECDCA] bg-[#FEF3F2]/40'
-                      : 'border-[#E4E7EB] bg-[#F8FAFC]'
+                      ? 'border-rose-200 bg-rose-50/40'
+                      : 'border-slate-200 bg-slate-50'
                   }`}
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[13px] font-bold text-[#18202A] truncate">{sensor.parameter}</span>
-                      <span
-                        className={`text-[11px] font-bold px-2 py-0.5 rounded ${
-                          sensor.isAbnormal && !isResolved
-                            ? 'bg-[#FEF3F2] text-[#D92D20] border border-[#FECDCA]'
-                            : 'bg-white text-[#5F6875] border border-[#E4E7EB]'
-                        }`}
-                      >
-                        {isResolved ? 'Normalized' : sensor.changePct}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1 text-[13px]">
-                      <div className="flex justify-between">
-                        <span className="text-[#5F6875]">Baseline:</span>
-                        <span className="text-[#18202A] font-mono">{sensor.baseline}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold">
-                        <span className="text-[#5F6875]">Observed:</span>
-                        <span className={`font-mono ${sensor.isAbnormal && !isResolved ? 'text-[#D92D20]' : 'text-[#18202A]'}`}>
-                          {isResolved ? sensor.baseline : sensor.current}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-2 border-t border-[#E4E7EB] text-[11px] flex justify-between font-semibold">
-                    <span className="text-[#8A93A0]">Tolerance ±5%</span>
-                    <span className={sensor.isAbnormal && !isResolved ? 'text-[#D92D20]' : 'text-[#18864B]'}>
-                      {sensor.isAbnormal && !isResolved ? 'Breached' : 'Within Bounds'}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[12px] font-bold text-slate-900 truncate">{sensor.parameter}</span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        sensor.isAbnormal && !isResolved
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {isResolved ? 'Nominal' : sensor.changePct}
                     </span>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* B. Chronological Event Timeline */}
-          <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-xs space-y-5">
-            <div>
-              <h3 className="text-[17px] font-bold text-[#18202A] flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#2F5BFF]" />
-                <span>Incident Chronology & Sequence of Events</span>
-              </h3>
-              <p className="text-[13px] text-[#5F6875] mt-0.5">
-                Exact sequence of recorded events and telemetry correlated to this investigation.
-              </p>
-            </div>
-
-            <div className="relative pl-6 space-y-5 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-[#E4E7EB]">
-              {currentInv.timeline.map((step, idx) => (
-                <div key={idx} className="relative flex items-start gap-4">
-                  <div className="w-4 h-4 rounded-full bg-[#2F5BFF] ring-4 ring-white -ml-[23px] shrink-0 mt-1" />
-                  <div className="flex-1 p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB]">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-bold text-[#18202A] font-mono">{step.time}</span>
-                        <span className="text-[12px] text-[#5F6875]">· Source: {step.source}</span>
-                      </div>
-                      {step.parameter && (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-white text-[#18202A] border border-[#E4E7EB]">
-                          {step.parameter}
-                        </span>
-                      )}
+                  <div className="text-[12px] space-y-0.5 text-slate-600">
+                    <div className="flex justify-between">
+                      <span>Baseline:</span>
+                      <span className="font-mono text-slate-900">{sensor.baseline}</span>
                     </div>
-                    <p className="text-[13px] text-[#18202A] leading-relaxed">
-                      {step.event}
-                    </p>
+                    <div className="flex justify-between font-semibold">
+                      <span>Observed:</span>
+                      <span className={`font-mono ${sensor.isAbnormal && !isResolved ? 'text-rose-700' : 'text-slate-900'}`}>
+                        {isResolved ? sensor.baseline : sensor.current}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* TAB 3: FINANCIAL & SCRAP ACCOUNTING */}
-      {activeSubTab === 'financial' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-xs space-y-5">
-            <div>
-              <h3 className="text-[17px] font-bold text-[#18202A] flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-[#2F5BFF]" />
-                <span>Quantified Financial Loss & Floor Scrap Accounting</span>
-              </h3>
-              <p className="text-[13px] text-[#5F6875] mt-0.5">
-                Translating this investigation&apos;s operational losses into direct P&amp;L impact.
-              </p>
-            </div>
+        {/* Tab Content 3: Ranked Causes & 5-Whys */}
+        {activeEvidenceTab === 'deep_dive' && (
+          <div className="p-6 space-y-3 animate-in fade-in duration-150">
+            {currentInv.rootCauses?.map((cause) => {
+              const isExpanded = expandedCauseId === cause.id;
+              const isRank1 = cause.rank === 1;
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
-              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB]">
-                <div className="text-[12px] font-semibold text-[#5F6875]">Lost Finished Units</div>
-                <div className="text-[24px] font-bold text-[#D92D20] mt-1 font-mono">
-                  {formatNumber(businessImpact.lostUnits)}
-                </div>
-                <div className="text-[11px] text-[#5F6875] mt-0.5">bottles below schedule</div>
-              </div>
-
-              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB]">
-                <div className="text-[12px] font-semibold text-[#5F6875]">Throughput Revenue Loss</div>
-                <div className="text-[24px] font-bold text-[#D92D20] mt-1 font-mono">
-                  {formatCurrency(businessImpact.estimatedRevenueLoss)}
-                </div>
-                <div className="text-[11px] text-[#5F6875] mt-0.5">at {currentInv.productName || 'this product'}&apos;s unit revenue</div>
-              </div>
-
-              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB]">
-                <div className="text-[12px] font-semibold text-[#5F6875]">Quality Defect Cost</div>
-                <div className="text-[24px] font-bold text-[#18202A] mt-1 font-mono">
-                  ${businessImpact.additionalReworkCost}
-                </div>
-                <div className="text-[11px] text-[#5F6875] mt-0.5">{businessImpact.additionalReworkUnits} rejected units</div>
-              </div>
-
-              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB]">
-                <div className="text-[12px] font-semibold text-[#5F6875]">Raw Ingredient Scrap</div>
-                <div className="text-[24px] font-bold text-[#D92D20] mt-1 font-mono">
-                  ${businessImpact.materialWasteCost}
-                </div>
-                <div className="text-[11px] text-[#5F6875] mt-0.5">{businessImpact.materialWasteKg} kg scrap material</div>
-              </div>
-
-              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB]">
-                <div className="text-[12px] font-semibold text-[#5F6875]">Run-Rate Burn</div>
-                <div className="text-[24px] font-bold text-[#D92D20] mt-1 font-mono">
-                  ${formatNumber(businessImpact.currentLossRatePerHour)}/hr
-                </div>
-                <div className="text-[11px] text-[#5F6875] mt-0.5">continuous line deficit</div>
-              </div>
-
-              <div className="p-4 bg-[#FEF3F2] rounded-xl border border-[#FECDCA]">
-                <div className="text-[12px] font-bold text-[#D92D20]">Potential 4h Loss</div>
-                <div className="text-[24px] font-bold text-[#D92D20] mt-1 font-mono">
-                  {formatCurrency(businessImpact.potentialAdditionalLoss4h)}
-                </div>
-                <div className="text-[11px] text-[#D92D20] mt-0.5 font-medium">if left unserviced</div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E4E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h4 className="text-[14px] font-bold text-[#18202A]">Need to record scrap units from this incident?</h4>
-                <p className="text-[12px] text-[#5F6875]">
-                  Floor supervisors can directly audit and post defective volumes to the material scrap ledger.
-                </p>
-              </div>
-              <button
-                onClick={() => setActiveTab('materials')}
-                className="h-9 px-4 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
-              >
-                <Flame className="w-3.5 h-3.5 text-white" />
-                <span>Open Materials & Scrap Ledger</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Assign Task */}
-      {selectedActionModalRec && (
-        <div className="fixed inset-0 z-50 bg-[#18202A]/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-[#E4E7EB] w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-[#E4E7EB] flex items-center justify-between">
-              <h3 className="text-[17px] font-bold text-[#18202A]">Dispatch Work Order</h3>
-              <button
-                onClick={() => setSelectedActionModalRec(null)}
-                className="text-[#8A93A0] hover:text-[#18202A] p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-[14px]">
-              <div>
-                <label className="block text-[12px] font-bold uppercase tracking-wider text-[#5F6875] mb-1.5">
-                  Task Title & Action
-                </label>
-                <div className="p-3 bg-[#F8FAFC] border border-[#E4E7EB] rounded-xl font-semibold text-[#18202A]">
-                  {selectedActionModalRec.title}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#5F6875] mb-1.5">
-                    Assignee
-                  </label>
-                  <select
-                    value={assignedTechnician}
-                    onChange={(e) => setAssignedTechnician(e.target.value)}
-                    className="w-full h-10 px-3 bg-white border border-[#D0D5DD] rounded-xl text-[#18202A] font-medium focus:outline-none focus:border-[#2F5BFF]"
-                  >
-                    <option value="Carlos Ruiz">Carlos Ruiz (Maintenance Lead)</option>
-                    <option value="Marcus Vance">Marcus Vance (Shift Supervisor)</option>
-                    <option value="Priya Patel">Priya Patel (QA Director)</option>
-                    <option value="Elena Rostova">Elena Rostova (Plant Operations)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#5F6875] mb-1.5">
-                    Due Window
-                  </label>
-                  <select
-                    value={taskDueDate}
-                    onChange={(e) => setTaskDueDate(e.target.value)}
-                    className="w-full h-10 px-3 bg-white border border-[#D0D5DD] rounded-xl text-[#18202A] font-medium focus:outline-none focus:border-[#2F5BFF]"
-                  >
-                    <option value="Today (Within 1 hour)">Within 1 hour</option>
-                    <option value="Today before Shift B close">Before Shift B close</option>
-                    <option value="Tonight during CIP clean">Tonight during CIP window</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="p-3.5 bg-[#EEF3FF] border border-[#D9E4FF] rounded-xl text-[13px] text-[#18202A]">
-                <strong className="text-[#2F5BFF]">Target Recovery:</strong> {selectedActionModalRec.expectedImpact}
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-[#E4E7EB] flex items-center justify-end gap-3 bg-[#F8FAFC]">
-              <button
-                onClick={() => setSelectedActionModalRec(null)}
-                className="h-10 px-4 text-[13px] font-semibold text-[#5F6875] hover:text-[#18202A] cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmTaskCreate}
-                disabled={isMutationPending(`createActionTaskFromRecommendation:${selectedActionModalRec.id}`)}
-                className="h-10 px-5 text-[13px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-xl shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isMutationPending(`createActionTaskFromRecommendation:${selectedActionModalRec.id}`) ? 'Dispatching...' : 'Dispatch Work Order'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Reject / Dismiss Recommendation */}
-      {rejectModalRec && (
-        <div className="fixed inset-0 z-50 bg-[#18202A]/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-[#E4E7EB] w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-[#E4E7EB] flex items-center justify-between">
-              <h3 className="text-[17px] font-bold text-[#18202A]">Dismiss Recommendation</h3>
-              <button
-                onClick={() => setRejectModalRec(null)}
-                className="text-[#8A93A0] hover:text-[#18202A] p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-[14px]">
-              <div>
-                <span className="text-[12px] font-bold uppercase tracking-wider text-[#5F6875] block mb-1.5">
-                  Proposed Action:
-                </span>
-                <div className="p-3 bg-[#F8FAFC] border border-[#E4E7EB] rounded-xl font-semibold text-[#18202A]">
-                  {rejectModalRec.title}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[12px] font-bold uppercase tracking-wider text-[#5F6875] mb-1.5">
-                  Reason for Dismissal
-                </label>
-                <select
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  className="w-full h-10 px-3 bg-white border border-[#D0D5DD] rounded-xl text-[#18202A] font-medium focus:outline-none focus:border-[#2F5BFF]"
+              return (
+                <div
+                  key={cause.id}
+                  className={`border rounded-xl transition-all overflow-hidden ${
+                    isRank1 ? 'border-blue-300 bg-blue-50/20' : 'border-slate-200 bg-white'
+                  }`}
                 >
-                  <option value="Operating telemetry is within permissible variance">Operating telemetry is within permissible variance</option>
-                  <option value="Scheduled maintenance is already planned for next shift">Scheduled maintenance is already planned for next shift</option>
-                  <option value="Alternative mechanical root cause identified by floor lead">Alternative mechanical root cause identified by floor lead</option>
-                  <option value="Product run concludes within 30 minutes; no downtime warranted">Product run concludes within 30 minutes; no downtime warranted</option>
-                </select>
-              </div>
+                  <div
+                    onClick={() => setExpandedCauseId(isExpanded ? '' : cause.id)}
+                    className="p-4 flex items-center justify-between cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-6 h-6 rounded flex items-center justify-center font-bold text-[12px] shrink-0 ${
+                          isRank1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        #{cause.rank}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-[14px] font-bold text-slate-900">{cause.title}</h4>
+                          <span className="text-[11px] font-semibold text-slate-600">({cause.confidence}% confidence)</span>
+                        </div>
+                        <p className="text-[12px] text-slate-500 mt-0.5">{cause.summary}</p>
+                      </div>
+                    </div>
 
-              <p className="text-[12px] text-[#5F6875]">
-                Dismissing this recommendation records operator feedback in the audit log without creating an open work order.
-              </p>
-            </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-slate-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                  </div>
 
-            <div className="px-6 py-4 border-t border-[#E4E7EB] flex items-center justify-end gap-3 bg-[#F8FAFC]">
-              <button
-                onClick={() => setRejectModalRec(null)}
-                className="h-10 px-4 text-[13px] font-semibold text-[#5F6875] hover:text-[#18202A] cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmReject}
-                className="h-10 px-5 text-[13px] font-semibold text-white bg-[#D92D20] hover:bg-[#B42318] rounded-xl shadow-xs cursor-pointer"
-              >
-                Confirm Dismissal
-              </button>
-            </div>
+                  {isExpanded && (
+                    <div className="px-5 pb-4 pt-2 border-t border-slate-100 bg-white space-y-2 text-[12px]">
+                      <div className="font-semibold text-slate-800">Telemetry Validation:</div>
+                      <ul className="space-y-1 text-slate-600 list-disc list-inside">
+                        {cause.supportingEvidence?.map((ev, i) => (
+                          <li key={i}>{ev}</li>
+                        ))}
+                      </ul>
+                      <div className="p-2.5 bg-slate-50 rounded text-slate-600 mt-2">
+                        <strong>Precedent:</strong> {cause.historicalPrecedent}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
