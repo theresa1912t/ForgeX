@@ -27,6 +27,11 @@ for local development. Notes on the other variables:
 - `AUTH_SECRET` — signs session JWTs. Generate one with `openssl rand -base64 32`. In dev,
   NextAuth will auto-generate an ephemeral one if left unset, but set a real value for anything
   beyond a quick local run.
+- `AUTH_URL` — optional, only needed when accessing the app through a tunnel (ngrok, Cloudflare
+  Tunnel) for a demo. Set it to the tunnel's current URL before starting it; otherwise
+  login/logout redirects to `localhost:3000` instead of the tunnel URL (Next.js's dev server
+  computes request origins from its own bind address, not the tunnel's `Host` header). Leave
+  unset for plain local dev.
 - `GEMINI_API_KEY` — optional. Powers the AI Assistant chat (`/api/v1/gemini/assistant`) and
   polishes investigation summaries into readable prose. If unset (or every model call fails),
   both fall back to a response built from real data instead of AI output — never a fabricated one.
