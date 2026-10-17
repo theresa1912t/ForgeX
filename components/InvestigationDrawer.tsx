@@ -6,30 +6,17 @@ import {
   X,
   Sparkles,
   AlertOctagon,
-  AlertTriangle,
   CheckCircle2,
   ExternalLink,
-  ArrowRight,
-  Flame,
-  Check,
-  ClipboardList,
   Wrench,
-  Activity,
   TrendingDown,
+  ClipboardList,
+  RotateCcw,
+  Check,
+  Clock,
 } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/calculations';
 import { RecommendedAction } from '@/lib/types';
-
-const HERO_INVESTIGATION_ID = 'inv-line3-hero';
-
-// The 1-click "dispatch" shortcut skips the assign modal, so it needs a default assignee —
-// mapped to the real seeded person who actually owns that recommendation's discipline, instead
-// of a single hardcoded name regardless of category.
-const DEFAULT_ASSIGNEE_BY_OWNER: Record<string, string> = {
-  Maintenance: 'Carlos Ruiz',
-  Quality: 'Priya Patel',
-  Operations: 'Marcus Vance',
-};
 
 export function InvestigationDrawer() {
   const {
@@ -38,58 +25,58 @@ export function InvestigationDrawer() {
     activeDrawerInvestigationId,
     investigations,
     openInvestigation,
-    approveRecommendation,
     createActionTaskFromRecommendation,
     completeTaskWithOutcome,
     actionTasks,
-    setActiveTab,
-    setSelectedInvestigationId,
     showToast,
-    isMutationPending,
+    resetDemoToHeroState,
   } = useFactory();
 
   if (!investigationDrawerOpen) return null;
 
-  const invId = activeDrawerInvestigationId || HERO_INVESTIGATION_ID;
-  const investigation = investigations[invId] || investigations[HERO_INVESTIGATION_ID];
+  const invId = activeDrawerInvestigationId || 'inv-line3-hero';
+  const investigation = investigations[invId] || investigations['inv-line3-hero'];
 
   if (!investigation) return null;
 
-  const isHero = investigation.id === HERO_INVESTIGATION_ID;
   const isResolved = investigation.status === 'Resolved';
-  // Prefer a task actually tied to THIS investigation; only fall back to matching by alertId for
-  // legacy tasks with no investigationId set — otherwise a different, unrelated task sharing the
-  // same alert (e.g. an old seeded one) could be picked instead.
-  const linkedTask =
-    actionTasks.find((t) => t.investigationId === investigation.id) ||
-    actionTasks.find((t) => !t.investigationId && t.alertId === investigation.alertId);
+  const linkedTask = actionTasks.find(
+    (t) => t.investigationId === investigation.id || t.alertId === 'alt-line3-loss'
+  );
+  const isTaskDispatched = Boolean(linkedTask);
 
-  // Every real investigation always has >=1 recommendation (generateInvestigation.ts throws
-  // before creating one with none) — this fallback is a defensive no-data placeholder, so it
-  // stays neutral rather than inventing specifics for an investigation it knows nothing about.
   const primaryRec = investigation.recommendations?.[0] || {
-    id: 'rec-fallback',
+    id: 'rec-1',
     investigationId: investigation.id,
-    title: 'No recommendation on record',
-    reason: investigation.summary,
-    priority: 'Medium',
-    owner: 'Operations',
-    estimatedEffort: 'TBD',
-    expectedImpact: 'Not yet quantified',
-    evidence: '',
+    title: 'Inspect filling valve M-03-V2 & replace worn diaphragm seal',
+    reason: 'Mechanical wear on elastomer diaphragm head #4/#8 is causing fluid throttling, pressure drop, and vibration.',
+    priority: 'Critical',
+    owner: 'Maintenance',
+    estimatedEffort: '30 minutes',
+    expectedImpact: 'Recover 1,000 bottles/hr (~$1,683/hr revenue)',
+    evidence: 'Vibration +38%, cycle time +22%',
     status: 'Pending',
   };
 
-  const handleApprove = (rec: RecommendedAction) => {
-    approveRecommendation(investigation.id, rec.id);
-    showToast(`Approved recommendation: "${rec.title}"`, 'success');
+  const handleQuickDispatch = () => {
+    createActionTaskFromRecommendation(
+      investigation.id,
+      primaryRec,
+      'Carlos Ruiz',
+      'Today (Within 45 mins)'
+    );
+    showToast('Work order dispatched to Carlos Ruiz', 'success');
   };
 
-  const handleCreateTask = (rec: RecommendedAction) => {
-    const assignee = DEFAULT_ASSIGNEE_BY_OWNER[rec.owner] || 'Carlos Ruiz';
-    const dueDate = 'Today (Within 45 mins)';
-    createActionTaskFromRecommendation(investigation.id, rec, assignee, dueDate);
-    showToast(`Dispatched work order to ${assignee}: "${rec.title}"`, 'success');
+  const handleQuickComplete = () => {
+    const taskId = linkedTask?.id || 'tsk-line3-filler';
+    completeTaskWithOutcome(
+      taskId,
+      'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
+      'Completed replacement under +0.2 bar backpressure test. Output normalized to 5,380 bph.',
+      1000
+    );
+    showToast('Line 3 speed fully restored to 5,380 bottles/hr!', 'success');
   };
 
   const handleOpenFullWorkbench = () => {
@@ -98,361 +85,222 @@ export function InvestigationDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-[#18202A]/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
-      <div className="w-full max-w-[580px] bg-white h-full shadow-2xl flex flex-col border-l border-[#E4E7EB] animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
+      <div className="w-full max-w-[540px] bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-250">
         
-        {/* 1. Clean Drawer Header Bar (Redundant Line/Machine text removed) */}
-        <div className="px-6 py-3.5 border-b border-[#E4E7EB] bg-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
+        {/* 1. Header Bar with Status */}
+        <div className="px-6 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
             <span
-              className={`h-7 px-2.5 rounded-[6px] text-[13px] font-semibold inline-flex items-center ${
+              className={`h-6 px-2.5 rounded-md text-[12px] font-semibold inline-flex items-center gap-1.5 ${
                 isResolved
-                  ? 'bg-[#EDFDF2] text-[#18864B] border border-[#A6F4C5]'
-                  : 'bg-[#FEF3F2] text-[#D92D20] border border-[#FECDCA]'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200'
               }`}
             >
               {isResolved ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                  Resolved
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Resolved &amp; Restored</span>
                 </>
               ) : (
                 <>
-                  <AlertOctagon className="w-3.5 h-3.5 mr-1" />
-                  Active Incident
+                  <AlertOctagon className="w-3.5 h-3.5" />
+                  <span>Active Incident</span>
                 </>
               )}
             </span>
+            <span className="text-[12px] text-slate-500 font-medium">
+              Line 3 · Filler M-03
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={handleOpenFullWorkbench}
-              className="h-8 px-2.5 text-[12px] font-semibold text-[#2F5BFF] hover:bg-[#EEF3FF] rounded-md transition-colors flex items-center gap-1.5 cursor-pointer"
-              title="Open full interactive workbench view"
+              className="h-8 px-2.5 text-[12px] font-semibold text-blue-600 hover:bg-blue-50 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+              title="Open full workbench view"
             >
-              <span>Full Workbench</span>
+              <span>Full View</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={closeInvestigationDrawer}
-              className="p-1.5 text-[#8A93A0] hover:text-[#18202A] hover:bg-[#F1F3F5] rounded-md transition-colors cursor-pointer"
-              title="Close drawer"
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* 2. Drawer Title & Operational Context */}
-        <div className="px-6 py-4 bg-[#F8FAFC] border-b border-[#E4E7EB] shrink-0">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-[#2F5BFF] flex items-center gap-1.5 mb-1">
+        {/* 2. Title & Context */}
+        <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200 shrink-0">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5 mb-1">
             <Sparkles className="w-3.5 h-3.5" />
-            AI Root-Cause Diagnosis
+            Root-Cause Diagnosis
           </div>
-          <h2 className="text-[18px] font-bold text-[#18202A] leading-snug">
+          <h2 className="text-[17px] font-bold text-slate-900 leading-snug">
             {investigation.title}
           </h2>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[12px] text-[#5F6875]">
-            <span>Product: <strong className="text-[#18202A]">{investigation.productName}</strong></span>
-            <span>Shift: <strong className="text-[#18202A]">{investigation.shift}</strong></span>
-            <span>Started: <strong className="text-[#18202A]">{investigation.startTime}</strong></span>
+          <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[12px] text-slate-500">
+            <span>Product: <strong className="text-slate-800">{investigation.productName}</strong></span>
+            <span>·</span>
+            <span>Shift: <strong className="text-slate-800">{investigation.shift}</strong></span>
+            <span>·</span>
+            <span>Deficit: <strong className="text-rose-600">-1,020 bph</strong></span>
           </div>
         </div>
 
-        {/* 3. Streamlined Content Body (Low Cognitive Load) */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        {/* 3. Linear 3-Step Body (No Clutter, Direct Action) */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           
-          {/* A. Status & Progression Banner */}
-          {isResolved ? (
-            <div className="p-4 rounded-xl border border-[#A6F4C5] bg-[#EDFDF2]/80">
-              <div className="flex items-center gap-2 text-[14px] font-bold text-[#18864B] mb-1">
-                <CheckCircle2 className="w-4 h-4 text-[#18864B]" />
-                <span>
-                  {investigation.lineName} Issue Resolved
-                  {investigation.resolutionOutcome && (
-                    <> (+{investigation.resolutionOutcome.recoveredUnitsPerHour} units/hr recovered)</>
-                  )}
-                </span>
-              </div>
-              <p className="text-[13px] text-[#18864B] leading-relaxed">
-                {investigation.resolutionOutcome?.notes ?? investigation.summary}
-                {investigation.resolutionOutcome && (
-                  <>
-                    {' '}Signed off by <strong>{investigation.resolutionOutcome.completedBy}</strong>.
-                  </>
-                )}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                <button
-                  onClick={() => {
-                    closeInvestigationDrawer();
-                    setActiveTab('materials');
-                    showToast('Opening Materials Ledger to verify scrap documentation.', 'info');
-                  }}
-                  className="h-8 px-3 text-[12px] font-semibold text-[#18202A] bg-white border border-[#D0D5DD] hover:bg-[#F7F8FA] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Flame className="w-3.5 h-3.5 text-[#D92D20]" />
-                  <span>Audit Scrap Ledger</span>
-                </button>
-                <button
-                  onClick={() => {
-                    closeInvestigationDrawer();
-                    setSelectedInvestigationId(investigation.id);
-                    setActiveTab('actions');
-                  }}
-                  className="h-8 px-3 text-[12px] font-semibold text-[#2F5BFF] hover:bg-[#EEF3FF] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <span>View in Action Center</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+          {/* A. Problem: Loss & Velocity Gap */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-xs space-y-2">
+            <div className="flex items-center justify-between text-[12px] font-bold uppercase text-slate-500">
+              <span>1. Throughput Gap</span>
+              <span className="text-rose-600 font-mono font-bold">-18.9% Below Schedule</span>
             </div>
-          ) : linkedTask ? (
-            <div className="p-4 rounded-xl border border-[#A6F4C5] bg-[#F6FEF9]">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 text-[13px] font-bold text-[#18864B]">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Work Order Dispatched: {linkedTask.assignedTo}</span>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <div className="text-[11px] text-slate-500 font-medium">Actual Speed</div>
+                <div className={`text-[18px] font-bold font-mono mt-0.5 ${isResolved ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {isResolved ? '5,380 bph' : '4,380 bph'}
                 </div>
-                <span className="text-[11px] font-semibold text-[#18864B] px-2 py-0.5 rounded bg-[#EDFDF2] border border-[#A6F4C5]">
-                  In Progress
-                </span>
+                <div className="text-[11px] text-slate-500 mt-0.5">Target: 5,400 bph</div>
               </div>
-              <p className="text-[13px] text-[#5F6875] mb-3 leading-relaxed">
-                {linkedTask.description}
-              </p>
-              <button
-                onClick={() => {
-                  if (isHero) {
-                    completeTaskWithOutcome(
-                      linkedTask.id,
-                      'Valve #4 diaphragm replaced. Mechanical stroke returned to nominal resistance.',
-                      'Completed replacement under +0.2 bar backpressure test. Output normalized.',
-                      1000
-                    );
-                  } else {
-                    completeTaskWithOutcome(
-                      linkedTask.id,
-                      `${linkedTask.title} completed.`,
-                      linkedTask.description,
-                    );
-                  }
-                }}
-                disabled={isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)}
-                className="w-full h-9 px-4 text-[13px] font-semibold text-white bg-[#18864B] hover:bg-[#157340] rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>
-                  {isMutationPending(`completeTaskWithOutcome:${linkedTask.id}`)
-                    ? 'Completing...'
-                    : isHero
-                    ? 'Complete Maintenance & Restore Speed'
-                    : 'Mark Task Complete'}
-                </span>
-              </button>
-            </div>
-          ) : (
-            <div className="p-3.5 rounded-xl border border-[#FEDF89] bg-[#FFFBF5] flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-[#B54708] shrink-0" />
-                <div>
-                  <div className="text-[13px] font-bold text-[#B54708]">
-                    {isHero ? 'Line 3 Speed Loss Alert' : `${investigation.lineName} — Action Required`}
-                  </div>
-                  <div className="text-[12px] text-[#7A5E0B]">
-                    {isHero ? 'Action required to prevent further scrap' : 'No work order dispatched yet'}
-                  </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <div className="text-[11px] text-slate-500 font-medium">Financial Burn</div>
+                <div className="text-[18px] font-bold font-mono text-amber-700 mt-0.5">
+                  {isResolved ? '$0/hr' : `$${formatNumber(investigation.businessImpact?.currentLossRatePerHour || 1683)}/hr`}
                 </div>
-              </div>
-              <button
-                onClick={() => handleCreateTask(primaryRec)}
-                disabled={isMutationPending(`createActionTaskFromRecommendation:${primaryRec.id}`)}
-                className="h-8 px-3.5 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <ClipboardList className="w-3.5 h-3.5" />
-                <span>{isMutationPending(`createActionTaskFromRecommendation:${primaryRec.id}`) ? 'Dispatching...' : '1-Click Dispatch Order'}</span>
-              </button>
-            </div>
-          )}
-
-          {/* B. The Core Problem: Compact 2-Tile Financial & Throughput Impact */}
-          <div>
-            <div className="text-[12px] font-bold uppercase tracking-wider text-[#5F6875] mb-2">
-              Operational & Financial Impact
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-xl border border-[#FECDCA] bg-[#FEF3F2]/40">
-                <div className="text-[12px] font-medium text-[#5F6875] flex items-center justify-between">
-                  <span>Output Variance</span>
-                  <TrendingDown className="w-3.5 h-3.5 text-[#D92D20]" />
-                </div>
-                <div className="text-[20px] font-bold text-[#D92D20] mt-1 font-mono">
-                  {investigation.outputVariancePct}%
-                </div>
-                <div className="text-[12px] text-[#D92D20] mt-0.5 font-medium">
-                  {isHero ? '4,380 / 5,400 bph (-1,020 bph)' : 'vs planned target'}
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-[#FEDF89] bg-[#FFFBF5]">
-                <div className="text-[12px] font-medium text-[#5F6875]">Run-Rate Financial Loss</div>
-                <div className="text-[20px] font-bold text-[#B54708] mt-1 font-mono">
-                  ${formatNumber(investigation.businessImpact?.currentLossRatePerHour ?? 0)}/hr
-                </div>
-                <div className="text-[12px] text-[#7A5E0B] mt-0.5">
-                  {formatCurrency(investigation.businessImpact?.estimatedRevenueLoss ?? 0)} shift loss
+                <div className="text-[11px] text-slate-500 mt-0.5">
+                  {isResolved ? 'Revenue saved' : 'Shift loss accumulating'}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* C. Primary Root Cause Synthesis (#1 Cause Only) */}
-          <div className="p-4 rounded-xl border border-[#D9E4FF] bg-[#F8FAFF]">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5 text-[13px] font-bold text-[#18202A]">
-                <Sparkles className="w-4 h-4 text-[#2F5BFF]" />
-                <span>Primary Root Cause (Rank #1)</span>
-              </div>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-[#EEF3FF] text-[#2F5BFF] border border-[#C7D7FE]">
-                {investigation.rootCauses[0]?.confidence ?? 0}% Confidence
+          {/* B. Confirmed Root Cause */}
+          <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/30 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-bold uppercase text-blue-800">
+                2. Confirmed Root Cause
+              </span>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                68% Confidence
               </span>
             </div>
-
-            <p className="text-[13px] font-medium text-[#18202A] leading-relaxed">
-              {investigation.rootCauses[0]?.title ?? 'No root cause on record'}
+            <h4 className="text-[14px] font-bold text-slate-900 leading-snug">
+              Aseptic Filling Valve #4 Diaphragm Seal Micro-Tear
+            </h4>
+            <p className="text-[12px] text-slate-600 leading-relaxed">
+              Mechanical wear on valve #4 elastomer diaphragm causes fluid throttling, increased cycle time (+22%), and manifold vibration (+38%).
             </p>
-
-            {/* Quick Evidence Bullets — the hero scenario's exact telemetry readout is narrative
-                detail with no generic equivalent fields; other investigations render their own
-                real evidence array instead of inheriting the hero's numbers. */}
-            {isHero ? (
-              <div className="mt-3 pt-3 border-t border-[#D9E4FF] grid grid-cols-2 gap-2 text-[12px]">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20]" />
-                  <span className="text-[#5F6875]">Vibration:</span>
-                  <strong className="text-[#18202A] font-mono">3.31 mm/s (+38%)</strong>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#D92D20]" />
-                  <span className="text-[#5F6875]">Dosing Cycle:</span>
-                  <strong className="text-[#18202A] font-mono">0.82s (+22%)</strong>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#E56B00]" />
-                  <span className="text-[#5F6875]">Manifold Pressure:</span>
-                  <strong className="text-[#18202A] font-mono">2.45 bar (-21%)</strong>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#E56B00]" />
-                  <span className="text-[#5F6875]">Raw Milk Lot:</span>
-                  <strong className="text-[#18202A] font-mono">#904 (+8.4% cP)</strong>
-                </div>
+            <div className="pt-2 border-t border-blue-200/60 grid grid-cols-3 gap-2 text-[11px] text-slate-700 font-mono">
+              <div className="p-1.5 bg-white/80 rounded border border-blue-100 text-center">
+                <span className="text-slate-400 block text-[10px]">Vibration</span>
+                <strong className="text-rose-700">3.31 mm/s</strong>
               </div>
-            ) : (
-              <div className="mt-3 pt-3 border-t border-[#D9E4FF] grid grid-cols-2 gap-2 text-[12px]">
-                {investigation.evidence.slice(0, 4).map((ev) => (
-                  <div key={ev.id} className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#2F5BFF]" />
-                    <span className="text-[#5F6875] truncate">{ev.metric || ev.title}:</span>
-                    <strong className="text-[#18202A] font-mono shrink-0">{ev.delta}</strong>
-                  </div>
-                ))}
+              <div className="p-1.5 bg-white/80 rounded border border-blue-100 text-center">
+                <span className="text-slate-400 block text-[10px]">Cycle Time</span>
+                <strong className="text-rose-700">0.82s (+22%)</strong>
               </div>
-            )}
-
-            {investigation.rootCauses.length > 1 && (
-              <div className="mt-3 pt-2 text-[12px] text-[#2F5BFF] flex items-center justify-between">
-                <button
-                  onClick={handleOpenFullWorkbench}
-                  className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                >
-                  <span>+ View {investigation.rootCauses.length - 1} secondary factor{investigation.rootCauses.length - 1 > 1 ? 's' : ''} in Full Workbench</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+              <div className="p-1.5 bg-white/80 rounded border border-blue-100 text-center">
+                <span className="text-slate-400 block text-[10px]">Pressure</span>
+                <strong className="text-amber-700">2.45 bar</strong>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* D. Single Primary Action Recommendation (Zero Decision Paralysis) */}
-          <div className="p-4 rounded-xl border border-[#E4E7EB] bg-white shadow-xs">
+          {/* C. Direct Action & Resolution Box */}
+          <div
+            className={`p-4 rounded-xl border transition-all ${
+              isResolved
+                ? 'bg-emerald-50/70 border-emerald-300'
+                : isTaskDispatched
+                ? 'bg-amber-50/60 border-amber-300'
+                : 'bg-white border-slate-200 shadow-xs'
+            }`}
+          >
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-[#2F5BFF]" />
-                <span className="text-[13px] font-bold text-[#18202A]">
-                  Recommended {primaryRec.owner} Action
-                </span>
-              </div>
+              <span className="text-[12px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>3. Corrective Action</span>
+              </span>
               <span
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${
-                  primaryRec.priority === 'Critical'
-                    ? 'text-[#D92D20] bg-[#FEF3F2] border-[#FECDCA]'
-                    : primaryRec.priority === 'High'
-                    ? 'text-[#E56B00] bg-[#FFF6ED] border-[#FEDF89]'
-                    : 'text-[#5F6875] bg-[#F2F4F7] border-[#E4E7EB]'
+                className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                  isResolved
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : isTaskDispatched
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-blue-50 text-blue-700'
                 }`}
               >
-                {primaryRec.priority} Priority
+                {isResolved ? 'Restored' : isTaskDispatched ? 'In Progress' : 'Pending'}
               </span>
             </div>
 
-            <h4 className="text-[14px] font-semibold text-[#18202A]">
+            <h4 className="text-[14px] font-bold text-slate-900 leading-snug">
               {primaryRec.title}
             </h4>
-            <p className="text-[12px] text-[#5F6875] mt-1 leading-[18px]">
-              {primaryRec.reason}
+            <p className="text-[12px] text-slate-600 mt-1 leading-relaxed">
+              Assigned: <strong>Carlos Ruiz (Lead Mechanic)</strong> · Expected recovery: <strong>+1,000 bph</strong>
             </p>
 
-            <div className="mt-3 pt-3 border-t border-[#E4E7EB] flex items-center justify-between gap-3">
-              <div className="text-[12px] text-[#18864B] font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Target: {primaryRec.expectedImpact}</span>
-              </div>
-
-              {!isResolved && !linkedTask && (
+            {/* In-place resolution control */}
+            <div className="mt-4 pt-3 border-t border-slate-200/80">
+              {isResolved ? (
+                <div className="space-y-2 text-center">
+                  <div className="flex items-center justify-center gap-1.5 text-emerald-800 font-bold text-[13px]">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Speed Restored to 5,380 bph</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      resetDemoToHeroState();
+                      showToast('Demo reset to initial bottleneck state.', 'info');
+                    }}
+                    className="w-full h-8 px-3 text-[12px] font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Replay Investigation</span>
+                  </button>
+                </div>
+              ) : isTaskDispatched ? (
+                <div className="space-y-2">
+                  <div className="text-[12px] text-amber-800 font-medium flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Carlos Ruiz on-site. Replacement seal kit ready.</span>
+                  </div>
+                  <button
+                    onClick={handleQuickComplete}
+                    className="w-full h-10 px-4 text-[13px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Verify Fix &amp; Restore Speed</span>
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={() => handleCreateTask(primaryRec)}
-                  disabled={isMutationPending(`createActionTaskFromRecommendation:${primaryRec.id}`)}
-                  className="h-8 px-3.5 text-[12px] font-semibold text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={handleQuickDispatch}
+                  className="w-full h-10 px-4 text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                 >
-                  <ClipboardList className="w-3.5 h-3.5" />
-                  <span>{isMutationPending(`createActionTaskFromRecommendation:${primaryRec.id}`) ? 'Dispatching...' : 'Dispatch Work Order'}</span>
+                  <ClipboardList className="w-4 h-4" />
+                  <span>1-Click Dispatch Carlos Ruiz</span>
                 </button>
-              )}
-
-              {linkedTask && !isResolved && (
-                <span className="h-8 px-3 text-[12px] font-medium text-[#18864B] bg-[#EDFDF2] border border-[#A6F4C5] rounded-lg flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Dispatched to {linkedTask.assignedTo}</span>
-                </span>
-              )}
-
-              {isResolved && (
-                <span className="h-8 px-3 text-[12px] font-medium text-[#18864B] bg-[#EDFDF2] border border-[#A6F4C5] rounded-lg flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Work Order Completed</span>
-                </span>
               )}
             </div>
           </div>
-
         </div>
 
-        {/* 4. Streamlined Persistent Drawer Footer */}
-        <div className="p-3.5 px-6 border-t border-[#E4E7EB] bg-white flex items-center justify-between shrink-0">
-          <button
-            onClick={closeInvestigationDrawer}
-            className="h-9 px-4 text-[13px] font-semibold text-[#5F6875] hover:text-[#18202A] hover:bg-[#F1F3F5] rounded-lg transition-colors cursor-pointer"
-          >
-            Close
-          </button>
-
+        {/* 4. Drawer Footer */}
+        <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-[12px] text-slate-500">
+          <span>Incident ID: {investigation.id}</span>
           <button
             onClick={handleOpenFullWorkbench}
-            className="h-9 px-4 text-[13px] font-semibold text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#D0D5DD] rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+            className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
           >
-            <span>Open Full Workbench</span>
-            <ExternalLink className="w-4 h-4 text-[#5F6875]" />
+            Open Full Workbench →
           </button>
         </div>
 
