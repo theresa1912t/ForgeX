@@ -78,7 +78,7 @@ Ask me any operational question about production loss, machine health, root caus
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/gemini/assistant', {
+      const res = await fetch('/api/v1/gemini/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

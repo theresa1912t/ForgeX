@@ -1,0 +1,736 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Enums ---------------------------------------------------------------
+
+enum UserRole {
+  Admin
+  Manager
+  Viewer
+}
+
+enum LineStatus {
+  Running
+  Degraded
+  Down
+  Maintenance
+}
+
+enum MachineStatus {
+  Normal
+  AbnormalBehavior
+  ElevatedRisk
+  Offline
+}
+
+enum MaterialQualityStatus {
+  Approved
+  Quarantine
+  Testing
+}
+
+enum MaterialBatchStatus {
+  Approved
+  Quarantine
+  InUse
+  Flagged
+}
+
+enum AlertSeverity {
+  Critical
+  High
+  Medium
+  Low
+}
+
+enum AlertCategory {
+  Production
+  Machine
+  Quality
+  Material
+  Downtime
+  Waste
+  Energy
+}
+
+enum AlertStatus {
+  New
+  Investigating
+  ActionRequired
+  InProgress
+  Resolved
+  Dismissed
+}
+
+enum EvidenceSignalType {
+  FACT
+  INFERENCE
+  RECOMMENDATION
+}
+
+enum RootCauseStatus {
+  LikelyContributor
+  SecondaryFactor
+  RuledOut
+  UnderReview
+}
+
+enum InvestigationStatus {
+  Active
+  Investigating
+  Resolved
+}
+
+enum Priority {
+  Critical
+  High
+  Medium
+  Low
+}
+
+enum RecommendationOwner {
+  Maintenance
+  Quality
+  Operations
+}
+
+enum RecommendationStatus {
+  Pending
+  Approved
+  Rejected
+  TaskCreated
+}
+
+enum ActionTaskStatus {
+  Pending
+  Assigned
+  InProgress
+  Completed
+  Cancelled
+}
+
+enum MaintenanceType {
+  Preventive
+  Corrective
+  Emergency
+  Inspection
+}
+
+enum MaintenanceStatus {
+  Completed
+  Scheduled
+  InProgress
+}
+
+enum DowntimeCategory {
+  EquipmentFailure
+  SetupChangeover
+  MaterialShortage
+  QualityIssue
+  OperatorIssue
+  PlannedMaintenance
+  Other
+}
+
+enum IngredientUsageStatus {
+  Normal
+  VarianceWarning
+  AnomalyLoss
+}
+
+enum WasteDefectCategory {
+  OverfillSpill
+  Contamination
+  UnderfillRejection
+  StartupPurge
+  PackagingTear
+  OffSpecViscosity
+}
+
+enum WasteReason {
+  Expired
+  Spoiled
+  Overproduction
+  PreparationMistake
+  WrongOrder
+  Damaged
+  ProcessLoss
+  Other
+}
+
+enum EnergyStatus {
+  Normal
+  Elevated
+  Spike
+}
+
+enum QualityDisposition {
+  Approved
+  Hold
+  Scrap
+  Rework
+}
+
+enum ProtocolType {
+  OPC_UA
+  MQTT
+  Modbus_TCP
+  REST_Historian
+}
+
+enum ConnectionStatus {
+  Connected
+  Degraded
+  Offline
+  Connecting
+}
+
+enum TagDataType {
+  Float32
+  Int16
+  Boolean
+  Double
+}
+
+enum TagStatus {
+  Streaming
+  Stale
+  Offline
+}
+
+// --- Org / Factory / Users ------------------------------------------------
+
+model Organization {
+  id        String   @id
+  name      String
+  industry  String
+  plan      String
+  createdAt String
+
+  factories Factory[]
+  users     User[]
+}
+
+model Factory {
+  id                       String @id
+  organizationId           String
+  name                     String
+  location                 String
+  timezone                 String
+  activeLinesCount         Int
+  totalCapacityUnitsPerDay Int
+
+  organization  Organization          @relation(fields: [organizationId], references: [id])
+  lines         ProductionLine[]
+  alerts        Alert[]
+  investigations Investigation[]
+  thresholds    OperationalThresholds?
+
+  @@index([organizationId])
+}
+
+model User {
+  id             String   @id
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           UserRole
+  title          String
+  avatar         String?
+  organizationId String
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+// --- Production ------------------------------------------------------------
+
+model ProductionLine {
+  id                   String     @id
+  factoryId            String
+  name                 String
+  code                 String
+  type                 String
+  status               LineStatus
+  targetUnitsPerHour    Int
+  currentUnitsPerHour   Int
+  efficiencyPct        Float
+  shift                String
+  currentProduct       String
+  downtimeMinutesToday Int
+  defectRatePct        Float
+  productionLossUnits  Int
+  activeAlertCount     Int
+  description          String
+
+  factory          Factory            @relation(fields: [factoryId], references: [id])
+  machines         Machine[]
+  alerts           Alert[]
+  investigations   Investigation[]
+  downtimeRecords  DowntimeRecord[]
+  ingredientUsages IngredientUsageRecord[]
+
+  @@index([factoryId])
+}
+
+model Machine {
+  id                             String        @id
+  lineId                         String
+  name                           String
+  code                           String
+  type                           String
+  status                         MachineStatus
+  healthScorePct                 Float
+  temperatureC                   Float
+  vibrationMmS                   Float
+  pressureBar                    Float
+  cycleTimeSec                   Float
+  operatingSpeedRpm              Int
+  downtimeHoursThisWeek          Float
+  lastMaintenanceDate            String
+  nextScheduledMaintenance       String
+  activeAlertCount               Int
+  productionLossContributionPct  Float
+
+  line               ProductionLine             @relation(fields: [lineId], references: [id])
+  alerts             Alert[]
+  maintenanceRecords MaintenanceRecord[]
+  downtimeRecords    DowntimeRecord[]
+  ingredientUsages   IngredientUsageRecord[]
+  connectivityProfile MachineConnectivityProfile?
+  sensorReadings     SensorReading[]
+
+  @@index([lineId])
+}
+
+model Product {
+  id                   String @id
+  name                 String
+  sku                  String @unique
+  category             String
+  unitRevenue          Float
+  standardCycleTimeSec Float
+  shelfLifeDays        Int
+  targetBatchSize      Int
+
+  alerts         Alert[]
+  investigations Investigation[]
+}
+
+// --- Materials ---------------------------------------------------------------
+
+model Material {
+  id               String                @id
+  name             String
+  code             String                @unique
+  category         String
+  supplier         String
+  unitCost         Float
+  unitOfMeasure    String
+  currentStock     Float
+  activeBatchCount Int
+  qualityStatus    MaterialQualityStatus
+
+  batches          MaterialBatch[]
+  ingredientUsages IngredientUsageRecord[]
+  wasteRecords     WasteRecord[]
+}
+
+model MaterialBatch {
+  id                   String               @id
+  materialId           String
+  batchCode            String
+  supplier             String
+  receivedDate         String
+  expiryDate           String
+  quantity             Float
+  unitOfMeasure        String
+  status               MaterialBatchStatus
+  viscosityDeviationPct Float?
+  associatedProducts   String[]
+  defectRateImpact     String?
+  relatedAlertIds      String[]
+
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@index([materialId])
+}
+
+// --- Alerts & Investigations --------------------------------------------------
+
+model Alert {
+  id              String        @id
+  title           String
+  severity        AlertSeverity
+  category        AlertCategory
+  description     String
+  factoryId       String
+  lineId          String
+  lineName        String
+  machineId       String?
+  machineName     String?
+  productId       String?
+  productName     String?
+  detectedAt      String
+  estimatedImpact String
+  revenueAtRisk   Float
+  confidence      Float
+  status          AlertStatus
+  resolvedAt      String?
+
+  factory       Factory        @relation(fields: [factoryId], references: [id])
+  line          ProductionLine @relation(fields: [lineId], references: [id])
+  machine       Machine?       @relation(fields: [machineId], references: [id])
+  product       Product?       @relation(fields: [productId], references: [id])
+  investigation Investigation?
+
+  @@index([factoryId])
+  @@index([lineId])
+  @@index([machineId])
+}
+
+model Investigation {
+  id                 String               @id
+  alertId            String               @unique
+  title              String
+  factoryId          String
+  lineId             String
+  lineName           String
+  machineId          String
+  machineName        String
+  productId          String
+  productName        String
+  shift              String
+  startTime          String
+  duration           String
+  outputVariancePct  Float
+  status             InvestigationStatus
+  summary            String
+  timeline           Json
+  sensorDeltas       Json
+  resolvedAt         String?
+  resolutionOutcome  Json?
+
+  alert           Alert                @relation(fields: [alertId], references: [id])
+  factory         Factory              @relation(fields: [factoryId], references: [id])
+  line            ProductionLine       @relation(fields: [lineId], references: [id])
+  product         Product              @relation(fields: [productId], references: [id])
+  rootCauses      RootCause[]
+  evidence        EvidenceItem[]
+  businessImpact  BusinessImpact?
+  recommendations RecommendedAction[]
+  actionTasks     ActionTask[]
+
+  @@index([factoryId])
+  @@index([lineId])
+}
+
+model RootCause {
+  id                   String           @id
+  investigationId      String
+  rank                 Int
+  title                String
+  confidence           Float
+  status               RootCauseStatus
+  summary              String
+  supportingEvidence   String[]
+  historicalPrecedent  String
+
+  investigation Investigation @relation(fields: [investigationId], references: [id])
+
+  @@index([investigationId])
+}
+
+model EvidenceItem {
+  id              String             @id
+  investigationId String
+  signalType      EvidenceSignalType
+  title           String
+  detail          String
+  metric          String?
+  delta           String?
+  source          String
+  verified        Boolean
+
+  investigation Investigation @relation(fields: [investigationId], references: [id])
+
+  @@index([investigationId])
+}
+
+model BusinessImpact {
+  id                        String @id @default(cuid())
+  investigationId           String @unique
+  lostUnits                 Int
+  estimatedRevenueLoss      Float
+  additionalReworkUnits     Int
+  additionalReworkCost      Float
+  materialWasteKg           Float
+  materialWasteCost         Float
+  downtimeMinutes           Int
+  downtimeCost              Float
+  currentLossRatePerHour    Float
+  potentialAdditionalLoss4h Float
+
+  investigation Investigation @relation(fields: [investigationId], references: [id])
+}
+
+model RecommendedAction {
+  id              String                @id
+  investigationId String
+  title           String
+  reason          String
+  priority        Priority
+  owner           RecommendationOwner
+  estimatedEffort String
+  expectedImpact  String
+  evidence        String
+  status          RecommendationStatus
+
+  investigation Investigation @relation(fields: [investigationId], references: [id])
+  actionTasks   ActionTask[]
+
+  @@index([investigationId])
+}
+
+// --- Actions ---------------------------------------------------------------
+
+model ActionTask {
+  id               String           @id
+  title            String
+  description      String
+  investigationId  String?
+  alertId          String
+  recommendationId String?
+  lineName         String
+  machineName      String
+  priority         Priority
+  assignedTo       String
+  assignedRole     String
+  dueDate          String
+  expectedImpact   String
+  actualResult     String?
+  resolutionNotes  String?
+  status           ActionTaskStatus
+  createdAt        String
+  completedAt      String?
+
+  investigation  Investigation?     @relation(fields: [investigationId], references: [id])
+  recommendation RecommendedAction? @relation(fields: [recommendationId], references: [id])
+
+  @@index([investigationId])
+  @@index([alertId])
+}
+
+// --- Notifications & Thresholds ----------------------------------------------
+
+model NotificationItem {
+  id         String        @id
+  title      String
+  message    String
+  severity   AlertSeverity
+  category   AlertCategory
+  timestamp  String
+  read       Boolean
+  linkModule String?
+  linkId     String?
+}
+
+model OperationalThresholds {
+  id                       String @id @default(cuid())
+  factoryId                String @unique
+  productionVariancePct    Float
+  defectRateThresholdPct   Float
+  vibrationAnomalyMmS      Float
+  downtimeAlertMinutes     Int
+  wasteThresholdKg         Float
+  energyAnomalyPct         Float
+
+  factory Factory @relation(fields: [factoryId], references: [id])
+}
+
+// --- Maintenance & Downtime --------------------------------------------------
+
+model MaintenanceRecord {
+  id                     String             @id
+  machineId              String
+  machineName            String
+  date                   String
+  type                   MaintenanceType
+  issue                  String
+  failureType            String
+  repairDurationMinutes  Int
+  technician             String
+  notes                  String
+  status                 MaintenanceStatus
+
+  machine Machine @relation(fields: [machineId], references: [id])
+
+  @@index([machineId])
+}
+
+model DowntimeRecord {
+  id                  String           @id
+  machineId           String
+  machineName         String
+  lineId              String
+  lineName            String
+  startTime           String
+  endTime             String
+  durationMinutes     Int
+  category            DowntimeCategory
+  reason              String
+  description         String
+  estimatedImpactCost Float
+
+  machine Machine        @relation(fields: [machineId], references: [id])
+  line    ProductionLine @relation(fields: [lineId], references: [id])
+
+  @@index([machineId])
+  @@index([lineId])
+}
+
+// --- Materials usage / Waste / Energy / Quality ------------------------------
+
+model IngredientUsageRecord {
+  id                 String                @id
+  materialId         String
+  materialName       String
+  batchCode          String
+  machineId          String
+  machineName        String
+  lineId             String
+  lineName           String
+  plannedQuantityKg  Float
+  actualQuantityKg   Float
+  yieldVariancePct   Float
+  scrapKg            Float
+  scrapCost          Float
+  unitOfMeasure      String
+  status             IngredientUsageStatus
+  timestamp          String
+
+  material Material       @relation(fields: [materialId], references: [id])
+  machine  Machine        @relation(fields: [machineId], references: [id])
+  line     ProductionLine @relation(fields: [lineId], references: [id])
+
+  @@index([materialId])
+  @@index([machineId])
+  @@index([lineId])
+}
+
+model WasteRecord {
+  id                      String               @id
+  materialId              String?
+  materialName            String
+  productionBatchCode     String
+  lineName                String
+  machineId               String?
+  machineName             String?
+  wasteQuantityKg         Float
+  wasteType               String
+  defectCategory          WasteDefectCategory?
+  wasteReason             WasteReason
+  wasteCost               Float
+  relatedAnomaly          String?
+  relatedInvestigationId  String?
+  recoveryActionTaken     String?
+  timestamp               String
+
+  material Material? @relation(fields: [materialId], references: [id])
+
+  @@index([materialId])
+}
+
+model EnergyRecord {
+  id                      String       @id
+  lineName                String
+  machineName             String
+  kwhConsumed             Float
+  costEstimate            Float
+  varianceFromBaselinePct Float
+  status                  EnergyStatus
+  timestamp               String
+}
+
+model QualityRecord {
+  id            String              @id
+  productName   String
+  lineName      String
+  batchCode     String
+  sampleSize    Int
+  defectCount   Int
+  defectRatePct Float
+  topDefectType String
+  disposition   QualityDisposition
+  timestamp     String
+}
+
+// --- Industrial connectivity --------------------------------------------------
+
+model DeviceConnection {
+  id                 String           @id
+  name               String
+  protocol           ProtocolType
+  endpointUrl        String
+  status             ConnectionStatus
+  pollingFrequencyMs Int
+  lastHeartbeat      String
+  pingLatencyMs      Int
+  securityMode       String
+  assignedMachines   String[]
+}
+
+model MachineConnectivityProfile {
+  machineId               String       @id
+  plcType                 String
+  ipAddress               String
+  gatewayId               String
+  protocol                ProtocolType
+  lastTelemetryTimestamp  String
+  healthScoreMethodology  Json
+
+  machine Machine             @relation(fields: [machineId], references: [id])
+  tags    SensorTagMapping[]
+}
+
+model SensorTagMapping {
+  id              String      @id @default(cuid())
+  machineId       String
+  metricKey       String
+  label           String
+  tagAddress      String
+  dataType        TagDataType
+  samplingRateHz  Float
+  lastRawValue    String
+  unit            String
+  sourceGateway   String
+  status          TagStatus
+
+  profile MachineConnectivityProfile @relation(fields: [machineId], references: [machineId])
+
+  @@index([machineId])
+}
+
+// --- Live telemetry (Phase 4) --------------------------------------------------
+// Raw readings ingested from the MQTT simulator/ingestor (scripts/mqttIngestor.ts). Deliberately
+// separate from Machine's status columns (temperatureC, vibrationMmS, etc.) — those are driven
+// by seed data and the hero investigation's scripted cascade, and must not be overwritten by a
+// live reading. This table is purely additive, feeding the Machines module's live feed view.
+model SensorReading {
+  id         String   @id @default(cuid())
+  machineId  String
+  metricKey  String
+  value      Float
+  unit       String
+  recordedAt DateTime @default(now())
+
+  machine Machine @relation(fields: [machineId], references: [id])
+
+  @@index([machineId, metricKey, recordedAt])
+}

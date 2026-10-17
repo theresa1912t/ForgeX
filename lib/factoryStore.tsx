@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Organization,
   Factory,
@@ -27,30 +28,41 @@ import {
   MachineConnectivityProfile,
 } from './types';
 import {
-  initialDeviceConnections,
-  initialMachineProfiles,
-} from './connectivityData';
-import {
-  initialOrganization,
-  initialFactories,
-  initialUsers,
-  initialProducts,
-  initialMaterials,
-  initialMaterialBatches,
-  initialProductionLines,
-  initialMachines,
-  initialAlerts,
-  heroInvestigation,
-  initialActionTasks,
-  initialNotifications,
-  initialMaintenanceRecords,
-  initialDowntimeRecords,
-  initialWasteRecords,
-  initialIngredientUsageRecords,
-  initialEnergyRecords,
-  initialQualityRecords,
-  initialThresholds,
-} from './mockData';
+  useOrganizationQuery,
+  useFactoriesQuery,
+  useUsersQuery,
+  useProductionLinesQuery,
+  useMachinesQuery,
+  useProductsQuery,
+  useMaterialsQuery,
+  useMaterialBatchesQuery,
+  useAlertsQuery,
+  useInvestigationsQuery,
+  useActionTasksQuery,
+  useNotificationsQuery,
+  useMaintenanceRecordsQuery,
+  useDowntimeRecordsQuery,
+  useWasteRecordsQuery,
+  useIngredientUsageRecordsQuery,
+  useEnergyRecordsQuery,
+  useQualityRecordsQuery,
+  useThresholdsQuery,
+  useDeviceConnectionsQuery,
+  useMachineProfilesQuery,
+} from './queries';
+import { useFactoryMutations } from './mutations';
+
+const EMPTY_ARRAY: never[] = [];
+const EMPTY_RECORD = {};
+const EMPTY_ORGANIZATION: Organization = { id: '', name: '', industry: '', plan: '', createdAt: '' };
+const EMPTY_THRESHOLDS: OperationalThresholds = {
+  productionVariancePct: 0,
+  defectRateThresholdPct: 0,
+  vibrationAnomalyMmS: 0,
+  downtimeAlertMinutes: 0,
+  wasteThresholdKg: 0,
+  energyAnomalyPct: 0,
+};
 
 interface FactoryContextType {
   // Tenant & Organization
@@ -59,13 +71,15 @@ interface FactoryContextType {
   selectedFactoryId: string;
   setSelectedFactoryId: (id: string) => void;
   selectedFactory: Factory;
-  
-  // User & Role
+
+  // Loading state (data-fetching only; nothing renders below this until it's false)
+  isLoading: boolean;
+  loadError: Error | null;
+
+  // User & Role (from the authenticated session — see auth.ts)
   users: User[];
-  currentUser: User;
-  setCurrentUserId: (id: string) => void;
+  currentUser: User | undefined;
   currentRole: UserRole;
-  setCurrentRole: (role: UserRole) => void;
 
   // Active module view
   activeTab: string;
@@ -149,7 +163,7 @@ interface FactoryContextType {
     resolutionNotes: string,
     recoveredUnitsPerHour?: number
   ) => void;
-  
+
   // Notifications
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
@@ -160,17 +174,95 @@ interface FactoryContextType {
 
   // Demo Reset
   resetDemoToHeroState: () => void;
+
+  // Alerting (Phase 5: on-demand threshold check — see lib/usecases/alerts/evaluateVibrationThresholds.ts)
+  evaluateThresholds: () => void;
+
+  // Investigation engine (Phase 6 — see lib/usecases/investigations/generateInvestigation.ts).
+  // Returns the created investigation (or undefined on failure) so the caller can navigate into it.
+  generateInvestigation: (alertId: string) => Promise<Investigation | undefined>;
+
+  // True while a mutation keyed by `key` is in flight — see lib/mutations.ts's withPending.
+  // Buttons use this to show a loading/disabled state and avoid double-firing on a slow network.
+  isMutationPending: (key: string) => boolean;
 }
 
 const FactoryContext = createContext<FactoryContextType | undefined>(undefined);
 
 export function FactoryProvider({ children }: { children: React.ReactNode }) {
-  const [organization, setOrganization] = useState<Organization>(initialOrganization);
-  const [factories, setFactories] = useState<Factory[]>(initialFactories);
+  const organizationQuery = useOrganizationQuery();
+  const factoriesQuery = useFactoriesQuery();
+  const usersQuery = useUsersQuery();
+  const productionLinesQuery = useProductionLinesQuery();
+  const machinesQuery = useMachinesQuery();
+  const productsQuery = useProductsQuery();
+  const materialsQuery = useMaterialsQuery();
+  const materialBatchesQuery = useMaterialBatchesQuery();
+  const alertsQuery = useAlertsQuery();
+  const investigationsQuery = useInvestigationsQuery();
+  const actionTasksQuery = useActionTasksQuery();
+  const notificationsQuery = useNotificationsQuery();
+  const maintenanceRecordsQuery = useMaintenanceRecordsQuery();
+  const downtimeRecordsQuery = useDowntimeRecordsQuery();
+  const wasteRecordsQuery = useWasteRecordsQuery();
+  const ingredientUsageRecordsQuery = useIngredientUsageRecordsQuery();
+  const energyRecordsQuery = useEnergyRecordsQuery();
+  const qualityRecordsQuery = useQualityRecordsQuery();
+  const thresholdsQuery = useThresholdsQuery();
+  const deviceConnectionsQuery = useDeviceConnectionsQuery();
+  const machineProfilesQuery = useMachineProfilesQuery();
+
+  const allQueries = [
+    organizationQuery,
+    factoriesQuery,
+    usersQuery,
+    productionLinesQuery,
+    machinesQuery,
+    productsQuery,
+    materialsQuery,
+    materialBatchesQuery,
+    alertsQuery,
+    investigationsQuery,
+    actionTasksQuery,
+    notificationsQuery,
+    maintenanceRecordsQuery,
+    downtimeRecordsQuery,
+    wasteRecordsQuery,
+    ingredientUsageRecordsQuery,
+    energyRecordsQuery,
+    qualityRecordsQuery,
+    thresholdsQuery,
+    deviceConnectionsQuery,
+    machineProfilesQuery,
+  ];
+  const session = useSession();
+  const isLoading = allQueries.some((q) => q.isLoading) || session.status === 'loading';
+  const loadError = allQueries.find((q) => q.isError)?.error as Error | undefined;
+
+  const organization = organizationQuery.data ?? EMPTY_ORGANIZATION;
+  const factories = factoriesQuery.data ?? EMPTY_ARRAY;
+  const users = usersQuery.data ?? EMPTY_ARRAY;
+  const productionLines = productionLinesQuery.data ?? EMPTY_ARRAY;
+  const machines = machinesQuery.data ?? EMPTY_ARRAY;
+  const products = productsQuery.data ?? EMPTY_ARRAY;
+  const materials = materialsQuery.data ?? EMPTY_ARRAY;
+  const materialBatches = materialBatchesQuery.data ?? EMPTY_ARRAY;
+  const alerts = alertsQuery.data ?? EMPTY_ARRAY;
+  const investigations = investigationsQuery.data ?? EMPTY_RECORD;
+  const actionTasks = actionTasksQuery.data ?? EMPTY_ARRAY;
+  const notifications = notificationsQuery.data ?? EMPTY_ARRAY;
+  const maintenanceRecords = maintenanceRecordsQuery.data ?? EMPTY_ARRAY;
+  const downtimeRecords = downtimeRecordsQuery.data ?? EMPTY_ARRAY;
+  const wasteRecords = wasteRecordsQuery.data ?? EMPTY_ARRAY;
+  const ingredientUsageRecords = ingredientUsageRecordsQuery.data ?? EMPTY_ARRAY;
+  const energyRecords = energyRecordsQuery.data ?? EMPTY_ARRAY;
+  const qualityRecords = qualityRecordsQuery.data ?? EMPTY_ARRAY;
+  const thresholds = thresholdsQuery.data ?? EMPTY_THRESHOLDS;
+  const deviceConnections = deviceConnectionsQuery.data ?? EMPTY_ARRAY;
+  const machineProfiles = machineProfilesQuery.data ?? EMPTY_RECORD;
+
   const [selectedFactoryId, setSelectedFactoryId] = useState<string>('fac-main');
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [currentUserId, setCurrentUserId] = useState<string>('usr-1'); // Marcus Vance (Manager)
-  
+
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [previousTab, setPreviousTab] = useState<string>('dashboard');
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
@@ -276,448 +368,26 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
     setActiveTab('investigations');
   };
 
-  // Entities
-  const [productionLines, setProductionLines] = useState<ProductionLine[]>(initialProductionLines);
-  const [machines, setMachines] = useState<Machine[]>(initialMachines);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [materials, setMaterials] = useState<Material[]>(initialMaterials);
-  const [materialBatches, setMaterialBatches] = useState<MaterialBatch[]>(initialMaterialBatches);
-  const [alerts, setAlerts] = useState<Alert[]>(initialAlerts);
-  const [investigations, setInvestigations] = useState<Record<string, Investigation>>({
-    'inv-line3-hero': heroInvestigation,
-  });
-  const [actionTasks, setActionTasks] = useState<ActionTask[]>(initialActionTasks);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
-  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>(initialMaintenanceRecords);
-  const [downtimeRecords, setDowntimeRecords] = useState<DowntimeRecord[]>(initialDowntimeRecords);
-  const [wasteRecords, setWasteRecords] = useState<WasteRecord[]>(initialWasteRecords);
-  const [ingredientUsageRecords, setIngredientUsageRecords] = useState<IngredientUsageRecord[]>(initialIngredientUsageRecords);
-  const [energyRecords, setEnergyRecords] = useState<EnergyRecord[]>(initialEnergyRecords);
-  const [qualityRecords, setQualityRecords] = useState<QualityRecord[]>(initialQualityRecords);
-  const [thresholds, setThresholds] = useState<OperationalThresholds>(initialThresholds);
-  const [deviceConnections, setDeviceConnections] = useState<DeviceConnection[]>(initialDeviceConnections);
-  const [machineProfiles, setMachineProfiles] = useState<Record<string, MachineConnectivityProfile>>(initialMachineProfiles);
+  // Computed User & Role — comes straight from the authenticated session, matched against the
+  // fetched user list for the full profile (title, avatar, organizationId aren't in the JWT).
+  const sessionUserId = session.data?.user?.id;
+  const currentUser = useMemo(
+    () => users.find((u) => u.id === sessionUserId),
+    [users, sessionUserId],
+  );
 
-  const testConnection = (connectionId: string) => {
-    const target = deviceConnections.find((c) => c.id === connectionId);
-    const newLatency = Math.floor(Math.random() * 15) + 8;
-    setDeviceConnections((prev) =>
-      prev.map((c) =>
-        c.id === connectionId
-          ? { ...c, status: 'Connected', pingLatencyMs: newLatency, lastHeartbeat: 'Just now (verified)' }
-          : c
-      )
-    );
-    showToast(`Gateway "${target?.name || connectionId}" verified responsive (${newLatency}ms latency)`, 'success');
-  };
-
-  const addDeviceConnection = (conn: Omit<DeviceConnection, 'id'>) => {
-    const newConn: DeviceConnection = {
-      ...conn,
-      id: `conn-user-${Date.now()}`,
-    };
-    setDeviceConnections((prev) => [newConn, ...prev]);
-    showToast(`Industrial Gateway "${newConn.name}" connected successfully`, 'success');
-  };
-
-  const updateMachineProfileGateway = (machineId: string, gatewayId: string) => {
-    setMachineProfiles((prev) => {
-      const existing = prev[machineId];
-      if (!existing) return prev;
-      return {
-        ...prev,
-        [machineId]: { ...existing, gatewayId },
-      };
-    });
-    showToast(`Machine telemetry binding updated`, 'success');
-  };
-
-  // Material & Waste Operations
-  const addMaterialBatch = (batchData: Omit<MaterialBatch, 'id'>) => {
-    const newBatch: MaterialBatch = {
-      ...batchData,
-      id: `mb-user-${Date.now()}`,
-    };
-    setMaterialBatches((prev) => [newBatch, ...prev]);
-    // Synchronously increase the corresponding material warehouse stock
-    setMaterials((prev) =>
-      prev.map((m) =>
-        m.id === batchData.materialId
-          ? {
-              ...m,
-              currentStock: m.currentStock + batchData.quantity,
-              activeBatchCount: m.activeBatchCount + 1,
-            }
-          : m
-      )
-    );
-    showToast(`Material lot ${newBatch.batchCode} received (+${newBatch.quantity} ${newBatch.unitOfMeasure})`, 'success');
-  };
-
-  const addWasteRecord = (wasteData: Omit<WasteRecord, 'id' | 'timestamp'>) => {
-    const newRecord: WasteRecord = {
-      ...wasteData,
-      id: `w-user-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-    };
-    setWasteRecords((prev) => [newRecord, ...prev]);
-    showToast(`Scrap entry logged for ${newRecord.lineName}: ${newRecord.wasteQuantityKg} kg ($${newRecord.wasteCost.toFixed(2)})`, 'warning');
-  };
-
-  const adjustMaterialStock = (materialId: string, newStock: number, reason?: string) => {
-    setMaterials((prev) =>
-      prev.map((m) =>
-        m.id === materialId
-          ? { ...m, currentStock: Math.max(0, newStock) }
-          : m
-      )
-    );
-    const targetMat = materials.find((m) => m.id === materialId);
-    showToast(`Inventory stock adjusted for ${targetMat?.name || materialId}: ${newStock} ${targetMat?.unitOfMeasure || 'units'}${reason ? ` (${reason})` : ''}`, 'info');
-  };
-
-  // Computed User & Role
-  const currentUser = useMemo(() => {
-    return users.find((u) => u.id === currentUserId) || users[0];
-  }, [users, currentUserId]);
-
-  const currentRole = currentUser.role;
-
-  const setCurrentRole = (role: UserRole) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === currentUserId ? { ...u, role } : u))
-    );
-  };
+  const currentRole = currentUser?.role ?? 'Viewer';
 
   const selectedFactory = useMemo(() => {
     return factories.find((f) => f.id === selectedFactoryId) || factories[0];
   }, [factories, selectedFactoryId]);
 
-  const updateThresholds = (newThresholds: Partial<OperationalThresholds>) => {
-    setThresholds((prev) => ({ ...prev, ...newThresholds }));
-  };
+  const mutations = useFactoryMutations(showToast);
 
-  // Add notification helper
-  const addNotification = (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => {
-    const newItem: NotificationItem = {
-      id: `notif-${Date.now()}`,
-      timestamp: 'Just now',
-      read: false,
-      ...notif,
-    };
-    setNotifications((prev) => [newItem, ...prev]);
-  };
-
-  const markNotificationAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  const markAllNotificationsAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  // HERO WORKFLOW: Approve Recommendation & Create Task
-  const approveRecommendation = (investigationId: string, recommendationId: string) => {
-    const inv = investigations[investigationId];
-    if (!inv) return;
-
-    const rec = inv.recommendations.find((r) => r.id === recommendationId);
-    if (!rec) return;
-
-    // Update recommendation status
-    setInvestigations((prev) => {
-      const targetInv = prev[investigationId];
-      if (!targetInv) return prev;
-      return {
-        ...prev,
-        [investigationId]: {
-          ...targetInv,
-          status: 'Investigating',
-          recommendations: targetInv.recommendations.map((r) =>
-            r.id === recommendationId ? { ...r, status: 'Approved' } : r
-          ),
-        },
-      };
-    });
-
-    // Update alert status
-    setAlerts((prev) =>
-      prev.map((a) =>
-        a.id === inv.alertId ? { ...a, status: 'In Progress' } : a
-      )
-    );
-
-    // Auto create or activate task in Action Center
-    const existingTask = actionTasks.find(
-      (t) => t.investigationId === investigationId && t.recommendationId === recommendationId
-    );
-
-    if (existingTask) {
-      setActionTasks((prev) =>
-        prev.map((t) =>
-          t.id === existingTask.id ? { ...t, status: 'Assigned' } : t
-        )
-      );
-    } else {
-      createActionTaskFromRecommendation(
-        investigationId,
-        rec,
-        'Carlos Ruiz',
-        'Today (Within 1 hour)'
-      );
-    }
-
-    addNotification({
-      title: 'Action Approved by Operations Manager',
-      message: `Recommendation "${rec.title}" approved and dispatched to ${rec.owner}.`,
-      severity: 'High',
-      category: 'Production',
-      linkModule: 'actions',
-    });
-
-    showToast(`Recommendation "${rec.title}" approved and assigned to Carlos Ruiz`, 'success');
-  };
-
-  const createActionTaskFromRecommendation = (
-    investigationId: string,
-    rec: RecommendedAction,
-    assignedTo: string,
-    dueDate: string
-  ) => {
-    const inv = investigations[investigationId];
-    const newTask: ActionTask = {
-      id: `tsk-${Date.now()}`,
-      title: rec.title,
-      description: `${rec.reason} Evidence: ${rec.evidence}`,
-      investigationId,
-      alertId: inv ? inv.alertId : '',
-      recommendationId: rec.id,
-      lineName: inv ? inv.lineName : 'Line 3',
-      machineName: inv ? inv.machineName : 'Filling Machine M-03',
-      priority: rec.priority,
-      assignedTo: assignedTo || 'Carlos Ruiz',
-      assignedRole: rec.owner === 'Maintenance' ? 'Maintenance Lead' : 'QA Lead',
-      dueDate: dueDate || 'Today',
-      expectedImpact: rec.expectedImpact,
-      status: 'Assigned',
-      createdAt: 'Today (Just now)',
-    };
-
-    setActionTasks((prev) => [newTask, ...prev]);
-
-    setInvestigations((prev) => {
-      const target = prev[investigationId];
-      if (!target) return prev;
-      return {
-        ...prev,
-        [investigationId]: {
-          ...target,
-          recommendations: target.recommendations.map((r) =>
-            r.id === rec.id ? { ...r, status: 'Task Created' } : r
-          ),
-        },
-      };
-    });
-
-    showToast(`Maintenance task created in Action Center for ${assignedTo || 'Carlos Ruiz'}`, 'success');
-  };
-
-  const updateTaskStatus = (taskId: string, status: ActionTask['status']) => {
-    setActionTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status } : t))
-    );
-  };
-
-  const assignTask = (taskId: string, assignedTo: string, role: string) => {
-    setActionTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? { ...t, assignedTo, assignedRole: role, status: 'Assigned' }
-          : t
-      )
-    );
-  };
-
-  // HERO STEP 15-19: Complete task with outcome and update investigation & factory performance
-  const completeTaskWithOutcome = (
-    taskId: string,
-    actualResult: string,
-    resolutionNotes: string,
-    recoveredUnitsPerHour: number = 920
-  ) => {
-    const task = actionTasks.find((t) => t.id === taskId);
-    if (!task) return;
-
-    // 1. Mark task completed
-    setActionTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? {
-              ...t,
-              status: 'Completed',
-              actualResult,
-              resolutionNotes,
-              completedAt: 'Just now',
-            }
-          : t
-      )
-    );
-
-    // 2. If connected to Line 3 Hero Investigation
-    if (task.investigationId === 'inv-line3-hero' || task.alertId === 'alt-line3-loss') {
-      // Mark Investigation Resolved
-      setInvestigations((prev) => {
-        const inv = prev['inv-line3-hero'];
-        if (!inv) return prev;
-        return {
-          ...prev,
-          'inv-line3-hero': {
-            ...inv,
-            status: 'Resolved',
-            resolvedAt: 'Today at 12:45 PM',
-            resolutionOutcome: {
-              recoveredUnitsPerHour,
-              notes: resolutionNotes || 'Filling valve M-03-V2 inspected and diaphragm seal kit replaced. Vibration normalized.',
-              completedBy: currentUser.name,
-              date: 'Today',
-            },
-          },
-        };
-      });
-
-      // Mark Alert Resolved
-      setAlerts((prev) =>
-        prev.map((a) =>
-          a.id === 'alt-line3-loss'
-            ? {
-                ...a,
-                status: 'Resolved',
-                resolvedAt: 'Today at 12:45 PM',
-              }
-            : a
-        )
-      );
-
-      // Improve Line 3 performance live on dashboard!
-      setProductionLines((prev) =>
-        prev.map((l) =>
-          l.id === 'line-3'
-            ? {
-                ...l,
-                status: 'Running',
-                currentUnitsPerHour: 5380,
-                efficiencyPct: 99.6,
-                defectRatePct: 0.45,
-                productionLossUnits: 140,
-                activeAlertCount: 0,
-              }
-            : l
-        )
-      );
-
-      // Improve Machine M-03 telemetry
-      setMachines((prev) =>
-        prev.map((m) =>
-          m.id === 'mach-m03'
-            ? {
-                ...m,
-                status: 'Normal',
-                healthScorePct: 96,
-                vibrationMmS: 1.85,
-                cycleTimeSec: 0.67,
-                activeAlertCount: 0,
-                productionLossContributionPct: 3,
-              }
-            : m
-        )
-      );
-
-      // Add Maintenance Log entry
-      const newMaintRecord: MaintenanceRecord = {
-        id: `maint-${Date.now()}`,
-        machineId: 'mach-m03',
-        machineName: 'Aseptic Rotary Liquid Filler M-03',
-        date: '2026-10-08',
-        type: 'Corrective',
-        issue: 'Replaced degraded aseptic filling valve M-03-V2 diaphragm seal',
-        failureType: 'Aseptic Valve Diaphragm Replacement',
-        repairDurationMinutes: 28,
-        technician: task.assignedTo || 'Carlos Ruiz',
-        notes: resolutionNotes || 'Installed OEM EPDM aseptic diaphragm kit #LP-DIA-04. Recalibrated stroke pressure to 3.2 bar.',
-        status: 'Completed',
-      };
-      setMaintenanceRecords((prev) => [newMaintRecord, ...prev]);
-
-      // Fire completion notification
-      addNotification({
-        title: 'Action Task COMPLETED - Line 3 Restored',
-        message: `Filling valve M-03-V2 serviced. Line 3 recovered ${recoveredUnitsPerHour} units/hr. Alert resolved.`,
-        severity: 'Low',
-        category: 'Production',
-        linkModule: 'dashboard',
-      });
-
-      showToast(`Action completed: Line 3 recovered +${recoveredUnitsPerHour} units/hr and marked as Resolved`, 'success');
-    } else {
-      // General task completion
-      if (task.alertId) {
-        setAlerts((prev) =>
-          prev.map((a) =>
-            a.id === task.alertId ? { ...a, status: 'Resolved' } : a
-          )
-        );
-      }
-      addNotification({
-        title: 'Operational Task Completed',
-        message: `Task "${task.title}" was marked completed by ${currentUser.name}.`,
-        severity: 'Low',
-        category: 'Production',
-        linkModule: 'actions',
-      });
-
-      showToast(`Task "${task.title}" marked as completed`, 'success');
-    }
-  };
-
-  // Ingest data handler (for CSV upload)
-  const ingestData = (datasetType: string, count: number, summaryNotes?: string) => {
-    addNotification({
-      title: `CSV Ingestion Completed: ${datasetType}`,
-      message: `Successfully processed ${count} records. AI cross-domain anomaly checks executed. ${summaryNotes || ''}`,
-      severity: 'Low',
-      category: 'Production',
-      linkModule: 'dashboard',
-    });
-
-    showToast(`${count.toLocaleString()} ${datasetType} records imported successfully`, 'success');
-  };
-
-  // Reset to initial hero demo state
-  const resetDemoToHeroState = () => {
-    setProductionLines(initialProductionLines);
-    setMachines(initialMachines);
-    setAlerts(initialAlerts);
-    setInvestigations({ 'inv-line3-hero': heroInvestigation });
-    setActionTasks(initialActionTasks);
-    setNotifications(initialNotifications);
-    setMaintenanceRecords(initialMaintenanceRecords);
-    setDeviceConnections(initialDeviceConnections);
-    setMachineProfiles(initialMachineProfiles);
-    setWasteRecords(initialWasteRecords);
-    setIngredientUsageRecords(initialIngredientUsageRecords);
+  const resetDemoToHeroState = async () => {
+    await mutations.resetDemoToHeroState();
     setSelectedAlertId('alt-line3-loss');
     setSelectedInvestigationId('inv-line3-hero');
-    addNotification({
-      title: 'Demo State Reset',
-      message: 'LactaPure Dairy scenario re-initialized to Hero Incident: Line 3 UHT Bottling loss (-18.9%).',
-      severity: 'Low',
-      category: 'Production',
-      linkModule: 'dashboard',
-    });
-
-    showToast('Demo scenario reset to initial dairy incident state (Line 3 loss -18.9%)', 'info');
   };
 
   return (
@@ -728,11 +398,11 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         selectedFactoryId,
         setSelectedFactoryId,
         selectedFactory,
+        isLoading,
+        loadError: loadError ?? null,
         users,
         currentUser,
-        setCurrentUserId,
         currentRole,
-        setCurrentRole,
         activeTab,
         setActiveTab,
         previousTab,
@@ -777,25 +447,28 @@ export function FactoryProvider({ children }: { children: React.ReactNode }) {
         energyRecords,
         qualityRecords,
         thresholds,
-        updateThresholds,
+        updateThresholds: mutations.updateThresholds,
         deviceConnections,
         machineProfiles,
-        testConnection,
-        addDeviceConnection,
-        updateMachineProfileGateway,
-        addMaterialBatch,
-        addWasteRecord,
-        adjustMaterialStock,
-        approveRecommendation,
-        createActionTaskFromRecommendation,
-        updateTaskStatus,
-        assignTask,
-        completeTaskWithOutcome,
-        markNotificationAsRead,
-        markAllNotificationsAsRead,
-        addNotification,
-        ingestData,
+        testConnection: mutations.testConnection,
+        addDeviceConnection: mutations.addDeviceConnection,
+        updateMachineProfileGateway: mutations.updateMachineProfileGateway,
+        addMaterialBatch: mutations.addMaterialBatch,
+        addWasteRecord: mutations.addWasteRecord,
+        adjustMaterialStock: mutations.adjustMaterialStock,
+        approveRecommendation: mutations.approveRecommendation,
+        createActionTaskFromRecommendation: mutations.createActionTaskFromRecommendation,
+        updateTaskStatus: mutations.updateTaskStatus,
+        assignTask: mutations.assignTask,
+        completeTaskWithOutcome: mutations.completeTaskWithOutcome,
+        markNotificationAsRead: mutations.markNotificationAsRead,
+        markAllNotificationsAsRead: mutations.markAllNotificationsAsRead,
+        addNotification: mutations.addNotification,
+        ingestData: mutations.ingestData,
         resetDemoToHeroState,
+        evaluateThresholds: mutations.evaluateThresholds,
+        generateInvestigation: mutations.generateInvestigation,
+        isMutationPending: mutations.isPending,
       }}
     >
       {children}

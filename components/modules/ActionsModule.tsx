@@ -23,6 +23,7 @@ export function ActionsModule() {
     completeTaskWithOutcome,
     setActiveTab,
     openInvestigation,
+    isMutationPending,
   } = useFactory();
 
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -204,10 +205,11 @@ export function ActionsModule() {
                         {task.status !== 'In Progress' && (
                           <button
                             onClick={() => updateTaskStatus(task.id, 'In Progress')}
-                            className="h-10 px-4 text-[14px] font-medium text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors flex items-center gap-2"
+                            disabled={isMutationPending(`updateTaskStatus:${task.id}`)}
+                            className="h-10 px-4 text-[14px] font-medium text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             <Play className="w-3.5 h-3.5 text-[#5F6875]" />
-                            <span>Mark In Progress</span>
+                            <span>{isMutationPending(`updateTaskStatus:${task.id}`) ? 'Updating...' : 'Mark In Progress'}</span>
                           </button>
                         )}
                         <button
@@ -311,9 +313,10 @@ export function ActionsModule() {
               </button>
               <button
                 onClick={handleConfirmCompletion}
-                className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg shadow-sm"
+                disabled={isMutationPending(`completeTaskWithOutcome:${completeModalTask.id}`)}
+                className="h-10 px-4 text-[14px] font-medium text-white bg-[#2F5BFF] hover:bg-[#2448D8] rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Confirm Completion & Close Investigation
+                {isMutationPending(`completeTaskWithOutcome:${completeModalTask.id}`) ? 'Completing...' : 'Confirm Completion & Close Investigation'}
               </button>
             </div>
           </div>

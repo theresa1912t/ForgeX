@@ -13,14 +13,17 @@ import {
   Calendar,
   Layers,
   ArrowRight,
+  Activity,
 } from 'lucide-react';
 
 export function AlertsModule() {
   const {
     alerts,
-    setActiveTab,
     openInvestigation,
     setSelectedAlertId,
+    evaluateThresholds,
+    generateInvestigation,
+    isMutationPending,
   } = useFactory();
 
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
@@ -58,8 +61,19 @@ export function AlertsModule() {
           </p>
         </div>
 
-        <div className="text-[14px] text-[#5F6875]">
-          Showing <strong className="text-[#18202A] font-semibold">{filteredAlerts.length}</strong> of {alerts.length} alerts
+        <div className="flex items-center gap-4">
+          <div className="text-[14px] text-[#5F6875]">
+            Showing <strong className="text-[#18202A] font-semibold">{filteredAlerts.length}</strong> of {alerts.length} alerts
+          </div>
+          <button
+            onClick={evaluateThresholds}
+            disabled={isMutationPending('evaluateThresholds')}
+            title="Check live telemetry against configured thresholds and raise an alert if needed"
+            className="h-10 px-3.5 text-[14px] font-medium text-[#18202A] bg-[#F7F8FA] hover:bg-[#E4E7EB]/60 border border-[#E4E7EB] rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Activity className={`w-4 h-4 text-[#2F5BFF] ${isMutationPending('evaluateThresholds') ? 'animate-spin' : ''}`} />
+            <span>{isMutationPending('evaluateThresholds') ? 'Checking...' : 'Run Threshold Check'}</span>
+          </button>
         </div>
       </div>
 
@@ -220,12 +234,16 @@ export function AlertsModule() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => {
-                          setActiveTab('ai-assistant');
+                        onClick={async () => {
+                          const investigation = await generateInvestigation(alert.id);
+                          if (investigation) {
+                            openInvestigation(investigation.id, 'alerts');
+                          }
                         }}
-                        className="h-10 px-4 text-[14px] font-medium text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors flex items-center gap-2"
+                        disabled={isMutationPending(`generateInvestigation:${alert.id}`)}
+                        className="h-10 px-4 text-[14px] font-medium text-[#18202A] bg-white hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        <span>Analyze with AI</span>
+                        <span>{isMutationPending(`generateInvestigation:${alert.id}`) ? 'Investigating...' : 'Investigate with AI'}</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     )}

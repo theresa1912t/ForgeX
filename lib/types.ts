@@ -417,3 +417,13 @@ export interface MachineConnectivityProfile {
   };
   tags: SensorTagMapping[];
 }
+
+// --- Live telemetry (Phase 4) ---
+export interface SensorReading {
+  id: string;
+  machineId: string;
+  metricKey: string;
+  value: number;
+  unit: string;
+  recordedAt: string;
+}

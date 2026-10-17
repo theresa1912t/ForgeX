@@ -22,7 +22,10 @@ export function Sidebar({ onOpenIngest }: SidebarProps) {
     alerts,
     actionTasks,
     resetDemoToHeroState,
+    isMutationPending,
   } = useFactory();
+
+  const isResetting = isMutationPending('resetDemoToHeroState');
 
   const activeAlertsCount = alerts.filter(
     (a) => a.status === 'New' || a.status === 'Action Required' || a.status === 'Investigating'
@@ -182,12 +185,13 @@ export function Sidebar({ onOpenIngest }: SidebarProps) {
 
         <button
           onClick={resetDemoToHeroState}
+          disabled={isResetting}
           title="Reset hero incident state"
-          className="w-full h-10 flex items-center justify-between px-3 text-[13px] font-medium text-[#5F6875] hover:text-[#18202A] hover:bg-[#F1F3F5] rounded-lg transition-colors"
+          className="w-full h-10 flex items-center justify-between px-3 text-[13px] font-medium text-[#5F6875] hover:text-[#18202A] hover:bg-[#F1F3F5] rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <div className="flex items-center gap-2.5">
-            <RotateCcw className="w-4 h-4 text-[#8A93A0]" />
-            <span>Reset Demo Scenario</span>
+            <RotateCcw className={`w-4 h-4 text-[#8A93A0] ${isResetting ? 'animate-spin' : ''}`} />
+            <span>{isResetting ? 'Resetting...' : 'Reset Demo Scenario'}</span>
           </div>
         </button>
       </div>

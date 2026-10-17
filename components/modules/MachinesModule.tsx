@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { useFactory } from '@/lib/factoryStore';
+import { useMachineReadingsQuery } from '@/lib/queries';
+import type { SensorReading } from '@/lib/types';
 import {
   Cpu,
   Activity,
@@ -54,6 +56,18 @@ export function MachinesModule() {
 
   const currentProfile = machineProfiles[currentMachine.id] || machineProfiles['mach-m03'];
   const currentGateway = deviceConnections.find((c) => c.id === currentProfile?.gatewayId);
+
+  // Live MQTT telemetry (Phase 4) — independent of currentMachine's static fields above, which
+  // stay driven by seed data and the hero investigation's cascade. See scripts/mqttIngestor.ts.
+  const readingsQuery = useMachineReadingsQuery(currentMachine.id);
+  const latestReadingsByMetric = Object.values(
+    (readingsQuery.data ?? []).reduce<Record<string, SensorReading>>((acc, reading) => {
+      if (!acc[reading.metricKey]) {
+        acc[reading.metricKey] = reading;
+      }
+      return acc;
+    }, {}),
+  );
 
   const machineMaint = maintenanceRecords.filter((r) => r.machineId === currentMachine.id);
   const machineDown = downtimeRecords.filter((r) => r.machineId === currentMachine.id);
@@ -306,6 +320,38 @@ export function MachinesModule() {
             <div className="text-[22px] font-semibold text-[#18202A] mt-1">{currentMachine.downtimeHoursThisWeek}h</div>
             <div className="text-[13px] text-[#8A93A0] mt-0.5">Stoppage total</div>
           </div>
+        </div>
+
+        {/* Live Telemetry Feed — real MQTT ingestion (scripts/mqttSimulator.ts + mqttIngestor.ts),
+            independent of the static cards above. Only mach-m03 publishes in this demo. */}
+        <div className="p-5 rounded-xl border border-[#D7F5E3] bg-[#F3FBF7] space-y-3">
+          <div className="flex items-center gap-2">
+            <Wifi className="w-4 h-4 text-[#18864B]" />
+            <h3 className="text-[15px] font-semibold text-[#18202A]">Live Telemetry Feed (MQTT)</h3>
+          </div>
+          {latestReadingsByMetric.length === 0 ? (
+            <p className="text-[13px] text-[#5F6875]">
+              No live readings yet for {currentMachine.name}. Run{' '}
+              <code className="text-[12px] bg-white px-1 py-0.5 rounded border border-[#E4E7EB]">npm run simulate:telemetry</code>{' '}
+              and{' '}
+              <code className="text-[12px] bg-white px-1 py-0.5 rounded border border-[#E4E7EB]">npm run ingest:telemetry</code>{' '}
+              (currently only mach-m03 publishes).
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {latestReadingsByMetric.map((reading) => (
+                <div key={reading.metricKey} className="p-3 bg-white rounded-lg border border-[#E4E7EB]">
+                  <div className="text-[12px] text-[#5F6875]">{reading.metricKey}</div>
+                  <div className="text-[18px] font-semibold text-[#18202A] mt-0.5">
+                    {reading.value} {reading.unit}
+                  </div>
+                  <div className="text-[11px] text-[#8A93A0] mt-0.5">
+                    {new Date(reading.recordedAt).toLocaleTimeString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 4. Telemetry Source & Hardware Tag Mapping Section (UX Transparency) */}

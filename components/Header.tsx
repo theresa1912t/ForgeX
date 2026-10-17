@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import { signOut } from 'next-auth/react';
 import { useFactory } from '@/lib/factoryStore';
-import { UserRole } from '@/lib/types';
 import {
   Building2,
   Calendar,
   Bell,
   Search,
-  UserCheck,
   ChevronDown,
   RotateCcw,
   Sparkles,
+  LogOut,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -25,21 +25,26 @@ export function Header({ onToggleNotifications, unreadCount }: HeaderProps) {
     selectedFactoryId,
     setSelectedFactoryId,
     currentUser,
-    users,
-    setCurrentUserId,
     currentRole,
-    setCurrentRole,
     setActiveTab,
     resetDemoToHeroState,
     timeFilterLabel,
     setTimeFilterPreset,
     selectedShift,
     showToast,
+    isMutationPending,
   } = useFactory();
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showFactoryMenu, setShowFactoryMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const isResetting = isMutationPending('resetDemoToHeroState');
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await signOut({ callbackUrl: '/login' });
+  };
 
   const selectedFactory = factories.find((f) => f.id === selectedFactoryId) || factories[0];
 
@@ -140,11 +145,12 @@ export function Header({ onToggleNotifications, unreadCount }: HeaderProps) {
         {/* Reset Demo Button */}
         <button
           onClick={resetDemoToHeroState}
+          disabled={isResetting}
           title="Reset hero incident state"
-          className="hidden sm:flex items-center gap-2 h-10 px-3 text-[14px] font-normal text-[#5F6875] hover:text-[#18202A] bg-[#FFFFFF] hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors"
+          className="hidden sm:flex items-center gap-2 h-10 px-3 text-[14px] font-normal text-[#5F6875] hover:text-[#18202A] bg-[#FFFFFF] hover:bg-[#F7F8FA] border border-[#E4E7EB] rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <RotateCcw className="w-4 h-4 text-[#8A93A0]" />
-          <span className="hidden lg:inline text-[13px]">Reset Scenario</span>
+          <RotateCcw className={`w-4 h-4 text-[#8A93A0] ${isResetting ? 'animate-spin' : ''}`} />
+          <span className="hidden lg:inline text-[13px]">{isResetting ? 'Resetting...' : 'Reset Scenario'}</span>
         </button>
 
         {/* Notification Bell */}
@@ -159,78 +165,40 @@ export function Header({ onToggleNotifications, unreadCount }: HeaderProps) {
           )}
         </button>
 
-        {/* User Profile & Persona Switcher */}
+        {/* User Account Menu */}
         <div className="relative">
           <button
             onClick={() => setShowRoleMenu(!showRoleMenu)}
             className="h-10 flex items-center gap-2.5 pl-2 pr-3 rounded-lg border border-[#E4E7EB] bg-[#FFFFFF] hover:bg-[#F7F8FA] transition-colors"
           >
             <div className="w-7 h-7 rounded-md bg-[#EEF3FF] text-[#2F5BFF] font-semibold text-[13px] flex items-center justify-center">
-              {currentUser.avatar || 'OP'}
+              {currentUser?.avatar || 'OP'}
             </div>
             <div className="text-left hidden sm:block">
               <div className="text-[14px] font-medium text-[#18202A] leading-tight flex items-center gap-1.5">
-                {currentUser.name}
+                {currentUser?.name}
               </div>
             </div>
             <ChevronDown className="w-4 h-4 text-[#8A93A0]" />
           </button>
 
           {showRoleMenu && (
-            <div className="absolute right-0 mt-1.5 w-72 bg-[#FFFFFF] rounded-xl shadow-lg border border-[#E4E7EB] py-2 z-50">
-              <div className="px-4 py-1.5 text-[13px] font-medium text-[#8A93A0]">
-                Switch Demo Persona
+            <div className="absolute right-0 mt-1.5 w-64 bg-[#FFFFFF] rounded-xl shadow-lg border border-[#E4E7EB] py-2 z-50">
+              <div className="px-4 py-2 border-b border-[#E4E7EB]">
+                <div className="text-[14px] font-medium text-[#18202A]">{currentUser?.name}</div>
+                <div className="text-[13px] text-[#5F6875]">{currentUser?.title}</div>
+                <span className="inline-block mt-1.5 text-[13px] px-1.5 py-0.2 rounded bg-[#F1F3F5] text-[#5F6875]">
+                  {currentRole}
+                </span>
               </div>
-              {users.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => {
-                    setCurrentUserId(u.id);
-                    setShowRoleMenu(false);
-                  }}
-                  className={`w-full text-left px-4 py-2.5 text-[14px] flex items-start gap-3 hover:bg-[#F7F8FA] ${
-                    u.id === currentUser.id ? 'bg-[#EEF3FF] font-medium text-[#2F5BFF]' : 'text-[#18202A]'
-                  }`}
-                >
-                  <div className="w-7 h-7 rounded-md bg-[#F1F3F5] text-[#5F6875] font-semibold text-[13px] flex items-center justify-center shrink-0 mt-0.5">
-                    {u.avatar}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate">{u.name}</span>
-                      <span className="text-[13px] px-1.5 py-0.2 rounded bg-[#F1F3F5] text-[#5F6875]">
-                        {u.role}
-                      </span>
-                    </div>
-                    <div className="text-[13px] text-[#5F6875] truncate">{u.title}</div>
-                  </div>
-                </button>
-              ))}
-
-              <div className="border-t border-[#E4E7EB] my-1.5 pt-2 px-4 py-1 bg-[#F7F8FA]">
-                <div className="text-[13px] font-medium text-[#5F6875] mb-2 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-[#5F6875]" />
-                  Role Permission Override:
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(['Admin', 'Manager', 'Viewer'] as UserRole[]).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => {
-                        setCurrentRole(r);
-                        setShowRoleMenu(false);
-                      }}
-                      className={`h-8 text-[13px] rounded-md text-center font-medium border transition-colors ${
-                        currentRole === r
-                          ? 'bg-[#2F5BFF] text-white border-[#2F5BFF]'
-                          : 'bg-[#FFFFFF] text-[#5F6875] border-[#E4E7EB] hover:bg-[#F1F3F5]'
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="w-full text-left px-4 py-2.5 text-[14px] text-[#D92D20] hover:bg-[#FEF3F2] flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <LogOut className="w-4 h-4" />
+                {isLoggingOut ? 'Logging out...' : 'Log out'}
+              </button>
             </div>
           )}
         </div>
