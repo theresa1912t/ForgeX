@@ -183,13 +183,76 @@ telemetry (no joins needed), not for the business/relational data.
   Platform stays Firebase (consistent with the existing `firebase-tools` dependency and
   `output: 'standalone'` in `next.config.ts`); Data Connect or a direct Prisma/Drizzle
   connection to Cloud SQL are both viable, direct Prisma/Drizzle gives more control.
+- **OT protocol: MQTT**, not OPC-UA — simplest to stand up locally (Mosquitto), good enough to
+  prove the ingestion pipeline. A real OPC-UA client is still a reasonable future addition for an
+  actual factory connection, just not needed to validate the architecture.
+- **Raw telemetry storage: a plain Postgres table (`SensorReading`), not Timescale/Influx** — at
+  demo scale a plain indexed table is simpler and avoids a second DB engine; easy to swap later
+  if real throughput ever demands it.
+- **AI root-cause ranking: a deterministic heuristic, not a statistical model or an LLM
+  decision.** Root causes are ranked in code by real evidence (live telemetry deviation from
+  threshold, correlated material/waste records) — always correct, always testable. Gemini is
+  used only to turn the ranked evidence into readable prose, with a templated fallback when it's
+  unavailable; it can never produce a wrong root-cause ranking, only better or worse writing.
 
 ## 7. Open decisions still to make
 
-- Which protocol(s) to actually support first for OT ingestion (OPC-UA is the most industrially
-  common; MQTT is simplest to prototype).
-- Whether the "AI root-cause ranking" should be a real statistical model or a defensible
-  heuristic (e.g., time-correlated deviation across tagged signals) — doing this properly is the
-  hardest, most novel part of the system.
-- Where raw high-frequency telemetry eventually lives: Timescale/Influx vs. Firestore vs.
-  deferring until ingestion is actually built (not needed for phases 1–3).
+- Real continuous background alerting (a job that evaluates thresholds on a timer, as originally
+  envisioned in section 5) vs. staying with the on-demand "Run Threshold Check" button built in
+  Phase 5 — deliberately chosen over a background poller to avoid a resolved incident
+  silently re-alerting once the live sensor and the scripted "fix" diverge.
+- Whether to extend Phase 5/6 (alerting + investigation) to the other 5 threshold types (defect
+  rate, waste, downtime, energy, production variance) and more machines — currently only
+  vibration on `mach-m03` has a real live feed behind it.
+
+## 8. Status as of Phase 6 (2026-10-16) and known gaps
+
+**Done:** Phases 1–6 (Foundation, CRUD parity, RBAC enforcement, telemetry ingestion, alerting,
+investigation engine) — all built, verified end-to-end via API/DB-level checks each phase.
+**Skipped for now:** Phase 7 (CSV ingestion pipeline) — self-contained, not a blocker for
+anything else, deliberately deferred as lower demo value than the phases that came before it.
+**Remaining:** Phase 8 (realtime push, multi-tenant hardening, audit log, deployment).
+
+Known gaps/deferred items, not full phases of their own:
+
+- **No UI role-gating.** A Viewer still sees every mutation button (Approve, Complete, Reset,
+  etc.) — it just fails with a 403 toast. Phase 3 deliberately scoped to server-side enforcement
+  only; hiding/disabling controls per role across every module is real, separate UI work.
+- **Alerting is on-demand, not continuous** (see section 7 above).
+- **Telemetry/alerting/investigation all effectively only cover `mach-m03`'s vibration metric.**
+  Extending to more machines/metrics is mechanical (same pattern) but not yet done.
+- **No automated test suite.** Every phase was verified manually (`curl`/`psql`) during
+  implementation, never codified into tests.
+- **Google AI Studio / GitHub sync compatibility with this Postgres-based stack is unresolved** —
+  researched (AI Studio's native backend is Firebase Firestore, not Postgres), not tested.
+- **Task assignment isn't enforced — a design question, not a bug.** `ActionTask.assignedTo` is
+  just a display label; `ActionsModule.tsx` only filters by status, never by `currentUser`, so
+  any Manager/Admin can act on any task regardless of who it's nominally assigned to (confirmed
+  during manual browser testing 2026-10-17 — an Admin completed a task "assigned" to a different
+  seeded Manager with zero friction). Whether that's actually wrong is open: real ops teams often
+  do let any qualified person pick up any open task. If a personalized "My Tasks" view or real
+  assignment enforcement is wanted later, `currentUser.name` would need to match `assignedTo`
+  (or a proper `assignedToUserId` FK added) and `ActionsModule.tsx` would need a "mine" filter.
+
+## 9. Manual browser testing pass (2026-10-17)
+
+First full manual click-through in an actual browser (Phases 2–6 were previously only verified
+via `curl`/`psql`). 14 test cases covering login, the hero investigation drawer, the full
+approve→in-progress→complete cascade, refresh-persistence, Materials, Settings thresholds, live
+Machine telemetry, the new on-demand alerting + AI investigation generation, all three RBAC
+tiers, Notifications, and Reset Demo — all passed functionally. Found 3 real issues, not yet
+fixed (next pass):
+
+1. **No loading/disabled state on mutation buttons or login/logout.** Every button in
+   `lib/mutations.ts`'s pattern fires the request with no pending indicator — a slow network
+   could make a user double-click and double-fire a mutation.
+2. **Several list queries have no explicit `ORDER BY`, so row order visibly shifts after a
+   write.** Confirmed on the Machines live-telemetry card and the Notifications list; likely
+   present in other `findAll`-style repository functions too (needs an audit, not just these two
+   fixes).
+3. **`components/modules/InvestigationsModule.tsx`'s detail page is mostly hardcoded, pre-existing
+   placeholder copy** ("Why did Line 3 production drop 14%?", "$4,650", "3h 18m", etc.) that
+   doesn't read from the actual `Investigation` object — so it shows the same text regardless of
+   which investigation (hero or AI-generated) is open. Predates this session's backend work;
+   `InvestigationDrawer.tsx` (the slide-over panel) does **not** have this problem and correctly
+   displays real data.

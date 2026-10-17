@@ -41,3 +41,9 @@ export async function findDistinctMachineIds(metricKey: string, client: DbClient
   });
   return rows.map((row) => row.machineId);
 }
+
+// Retention cleanup — there's no retention limit on writes (every message the ingestor receives
+// gets its own row), so something has to periodically trim old rows. See scripts/mqttIngestor.ts.
+export async function deleteOlderThan(cutoff: Date, client: DbClient = prisma) {
+  return client.sensorReading.deleteMany({ where: { recordedAt: { lt: cutoff } } });
+}

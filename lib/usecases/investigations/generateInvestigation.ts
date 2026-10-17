@@ -8,6 +8,7 @@ import * as sensorReadingRepository from '@/lib/repositories/sensorReadingReposi
 import * as thresholdsRepository from '@/lib/repositories/thresholdsRepository';
 import * as materialBatchRepository from '@/lib/repositories/materialBatchRepository';
 import * as wasteRecordRepository from '@/lib/repositories/wasteRecordRepository';
+import * as downtimeRecordRepository from '@/lib/repositories/downtimeRecordRepository';
 import * as investigationRepository from '@/lib/repositories/investigationRepository';
 import * as recommendedActionRepository from '@/lib/repositories/recommendedActionRepository';
 import { rootCauseStatusMap, recommendationStatusMap } from '@/prisma/enumMaps';
@@ -17,7 +18,7 @@ import { NotFoundError, ValidationError } from '@/lib/usecases/errors';
 const INSUFFICIENT_DATA_MESSAGE =
   'Not enough data linked to this alert to generate an investigation yet.';
 
-type SignalKind = 'Machine' | 'Material' | 'Waste';
+type SignalKind = 'Machine' | 'Material' | 'Waste' | 'Downtime';
 
 interface Signal {
   kind: SignalKind;
@@ -50,18 +51,15 @@ export async function generateInvestigation(alertId: string) {
     throw new ValidationError(INSUFFICIENT_DATA_MESSAGE);
   }
 
-  let productId = alert.productId;
-  let productName = alert.productName;
-  if (!productId || !productName) {
-    const matched = await productRepository.findByName(line.currentProduct);
-    if (matched) {
-      productId = matched.id;
-      productName = matched.name;
-    }
+  let product = alert.productId ? await productRepository.findById(alert.productId) : null;
+  if (!product) {
+    product = await productRepository.findByName(line.currentProduct);
   }
-  if (!productId || !productName) {
+  if (!product) {
     throw new ValidationError(INSUFFICIENT_DATA_MESSAGE);
   }
+  const productId = product.id;
+  const productName = product.name;
 
   // --- Gather real evidence (only what actually exists — never fabricated) ---
   const signals: Signal[] = [];
@@ -114,6 +112,22 @@ export async function generateInvestigation(alertId: string) {
     });
   }
 
+  const downtimeRecords = await downtimeRecordRepository.findByMachine(machine.id);
+  const worstDowntime = downtimeRecords.sort(
+    (a, b) => b.estimatedImpactCost - a.estimatedImpactCost,
+  )[0];
+  if (worstDowntime) {
+    signals.push({
+      kind: 'Downtime',
+      title: `Unplanned downtime on ${machine.name}`,
+      detail: `${worstDowntime.durationMinutes} minute stoppage logged ($${worstDowntime.estimatedImpactCost.toFixed(2)}) — ${worstDowntime.category}: ${worstDowntime.reason}.`,
+      metric: 'downtimeCost',
+      delta: `$${worstDowntime.estimatedImpactCost.toFixed(2)}`,
+      source: 'Downtime record',
+      confidence: 65,
+    });
+  }
+
   if (signals.length === 0) {
     throw new ValidationError(INSUFFICIENT_DATA_MESSAGE);
   }
@@ -124,6 +138,7 @@ export async function generateInvestigation(alertId: string) {
     Machine: 'Maintenance',
     Material: 'Quality',
     Waste: 'Operations',
+    Downtime: 'Maintenance',
   };
 
   const investigationId = `inv-user-${randomUUID()}`;
@@ -167,19 +182,25 @@ export async function generateInvestigation(alertId: string) {
     status: recommendationStatusMap['Pending'],
   }));
 
-  const wasteSignalRecord = worstWaste;
+  // Real rate, not a cumulative total — we have no reliable "how long has this been happening"
+  // duration to multiply by, so lostUnits/estimatedRevenueLoss stay honest at 0/alert.revenueAtRisk
+  // rather than guessing a cumulative figure. The rate itself IS real: line's actual target vs.
+  // current throughput, times the product's actual unit revenue.
+  const lostUnitsPerHour = Math.max(0, line.targetUnitsPerHour - line.currentUnitsPerHour);
+  const currentLossRatePerHour = lostUnitsPerHour * product.unitRevenue;
+
   const businessImpact = {
     investigationId,
     lostUnits: 0,
     estimatedRevenueLoss: alert.revenueAtRisk ?? 0,
     additionalReworkUnits: 0,
     additionalReworkCost: 0,
-    materialWasteKg: wasteSignalRecord?.wasteQuantityKg ?? 0,
-    materialWasteCost: wasteSignalRecord?.wasteCost ?? 0,
-    downtimeMinutes: 0,
-    downtimeCost: 0,
-    currentLossRatePerHour: 0,
-    potentialAdditionalLoss4h: 0,
+    materialWasteKg: worstWaste?.wasteQuantityKg ?? 0,
+    materialWasteCost: worstWaste?.wasteCost ?? 0,
+    downtimeMinutes: worstDowntime?.durationMinutes ?? 0,
+    downtimeCost: worstDowntime?.estimatedImpactCost ?? 0,
+    currentLossRatePerHour,
+    potentialAdditionalLoss4h: currentLossRatePerHour * 4,
   };
 
   const top = signals[0];
