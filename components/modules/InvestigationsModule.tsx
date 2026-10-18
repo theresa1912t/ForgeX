@@ -235,9 +235,12 @@ export function InvestigationsModule() {
             <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[12px] shrink-0">
               <Check className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="text-[11px] font-semibold text-emerald-800 uppercase">Step 2: Diagnosis</div>
-              <div className="text-[13px] font-bold text-slate-900 leading-tight truncate">
+              <div
+                className="text-[13px] font-bold text-slate-900 leading-tight truncate"
+                title={isHero ? 'Valve #4 Diaphragm Seal' : (topCause?.title ?? 'Not yet determined')}
+              >
                 {isHero ? 'Valve #4 Diaphragm Seal' : (topCause?.title ?? 'Not yet determined')}
               </div>
             </div>
@@ -260,7 +263,7 @@ export function InvestigationsModule() {
             >
               {isResolved || isTaskDispatched ? <Check className="w-4 h-4" /> : '3'}
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div
                 className={`text-[11px] font-semibold uppercase ${
                   isResolved || isTaskDispatched ? 'text-emerald-800' : 'text-blue-700'
@@ -268,7 +271,10 @@ export function InvestigationsModule() {
               >
                 Step 3: Action
               </div>
-              <div className="text-[13px] font-bold text-slate-900 leading-tight truncate">
+              <div
+                className="text-[13px] font-bold text-slate-900 leading-tight truncate"
+                title={isTaskDispatched ? `${linkedTask?.assignedTo} Assigned` : 'Dispatch Maintenance'}
+              >
                 {isTaskDispatched ? `${linkedTask?.assignedTo} Assigned` : 'Dispatch Maintenance'}
               </div>
             </div>
@@ -346,9 +352,14 @@ export function InvestigationsModule() {
                   {currentInv.outputVariancePct}%
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Product:</span>
-                <span className="font-mono font-semibold text-slate-800 truncate">{currentInv.productName || 'N/A'}</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-500 shrink-0">Product:</span>
+                <span
+                  className="font-mono font-semibold text-slate-800 truncate min-w-0"
+                  title={currentInv.productName || 'N/A'}
+                >
+                  {currentInv.productName || 'N/A'}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Financial Burn Rate:</span>
@@ -387,18 +398,27 @@ export function InvestigationsModule() {
             {/* Real evidence items for this investigation, up to 3 */}
             <div className="mt-4 space-y-2 text-[12px]">
               {(currentInv.evidence ?? []).slice(0, 3).map((ev) => (
-                <div key={ev.id} className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                  <span className="text-slate-600 truncate">{ev.metric || ev.title}:</span>
+                <div key={ev.id} className="flex items-center justify-between gap-2 p-2 rounded bg-slate-50 border border-slate-100">
+                  <span className="text-slate-600 truncate min-w-0" title={ev.metric || ev.title}>
+                    {ev.metric || ev.title}:
+                  </span>
                   <span className="font-mono font-bold text-rose-700 shrink-0">{ev.delta}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 mt-4 text-[12px] text-slate-500 flex items-center justify-between">
-            <span>Machine: <strong className="truncate">{currentInv.machineName}</strong></span>
+          <div className="pt-4 border-t border-slate-100 mt-4 text-[12px] text-slate-500 flex items-center justify-between gap-3">
+            <span className="truncate min-w-0" title={`Machine: ${currentInv.machineName}`}>
+              Machine: <strong className="text-slate-700">{currentInv.machineName}</strong>
+            </span>
             {currentInv.rootCauses?.[1] && (
-              <span>Secondary: <strong className="truncate">{currentInv.rootCauses[1].title}</strong></span>
+              <span
+                className="truncate min-w-0 text-right"
+                title={`Secondary: ${currentInv.rootCauses[1].title}`}
+              >
+                Secondary: <strong className="text-slate-700">{currentInv.rootCauses[1].title}</strong>
+              </span>
             )}
           </div>
         </div>
@@ -451,9 +471,14 @@ export function InvestigationsModule() {
                 <span className="text-slate-500">Estimated Effort:</span>
                 <span className="font-semibold text-slate-900">{primaryRec.estimatedEffort}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Expected Result:</span>
-                <span className="font-semibold text-emerald-700 truncate">{primaryRec.expectedImpact}</span>
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500 shrink-0">Expected Result:</span>
+                <span
+                  className="font-semibold text-emerald-700 truncate min-w-0 text-right"
+                  title={primaryRec.expectedImpact}
+                >
+                  {primaryRec.expectedImpact}
+                </span>
               </div>
             </div>
           </div>
@@ -645,8 +670,10 @@ export function InvestigationsModule() {
                         : 'border-slate-200 bg-slate-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[12px] font-bold text-slate-900 truncate">{sensor.parameter}</span>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-[12px] font-bold text-slate-900 truncate min-w-0" title={sensor.parameter}>
+                        {sensor.parameter}
+                      </span>
                       <span
                         className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                           sensor.isAbnormal && !isResolved
